@@ -1,0 +1,8 @@
+defmodule PmdbTest do
+  use ExUnit.Case
+  doctest Pmdb
+
+  test "the truth" do
+    assert 1 + 1 == 2
+  end
+end
