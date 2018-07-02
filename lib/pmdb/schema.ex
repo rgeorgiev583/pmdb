@@ -1,6 +1,13 @@
 defmodule Pmdb.Schema do
   @type primitive_data() :: boolean() | number() | binary() | bitstring()
   @type primitive_data_type() :: :boolean | :integer | :float | :binary | :bitstring | :string
+  @type annotated_primitive_data() ::
+          {:boolean, boolean()}
+          | {:integer, integer()}
+          | {:float, float()}
+          | {:binary, binary()}
+          | {:bitstring, bitstring()}
+          | {:string, String.t()}
   @type data() ::
           primitive_data()
           | [data()]
@@ -9,4 +16,8 @@ defmodule Pmdb.Schema do
           primitive_data_type()
           | [data_type()]
           | %{required(String.t()) => data_type()}
+  @type annotated_data() ::
+          annotated_primitive_data()
+          | {:list, [annotated_data()]}
+          | {:map, %{required(String.t()) => annotated_data()}}
 end
