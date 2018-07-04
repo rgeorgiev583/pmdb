@@ -12,6 +12,9 @@ defmodule Pmdb.Application do
       # {Pmdb.Worker, arg},
     ]
 
+    :ets.new(:data, [:named_table])
+    :ets.new(:handlers, [:named_table, read_concurrency: true])
+
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Pmdb.Supervisor]
