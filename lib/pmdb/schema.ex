@@ -20,4 +20,7 @@ defmodule Pmdb.Schema do
           annotated_primitive_data()
           | {:list, [annotated_data()]}
           | {:map, %{required(String.t()) => annotated_data()}}
+
+  @type list_delta() :: {non_neg_integer(), non_neg_integer(), [data()]}
+  @type data_delta() :: primitive_data() | [list_delta()] | %{required(String.t()) => data()}
 end
