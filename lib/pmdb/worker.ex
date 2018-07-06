@@ -57,26 +57,26 @@ defmodule Pmdb.Worker do
     end
   end
 
-  defp compose_list_object(path) do
+  defp construct_list_object(path) do
     match_spec = [{{path ++ [:"$1"], :"$2"}, [is_integer: :"$1"], [{{:"$1", :"$2"}}]}]
 
     :ets.select(:data, match_spec)
     |> Enum.sort_by(fn {index, _} -> index end)
-    |> Enum.map(fn {index, value} -> compose_data_object(path ++ [index], value) end)
+    |> Enum.map(fn {index, value} -> construct_data_object(path ++ [index], value) end)
   end
 
-  defp compose_map_object(path) do
+  defp construct_map_object(path) do
     match_spec = [{{path ++ [:"$1"], :"$2"}, [is_binary: :"$1"], [{{:"$1", :"$2"}}]}]
 
     :ets.select(:data, match_spec)
-    |> Enum.map(fn {key, value} -> compose_data_object(path ++ [key], value) end)
+    |> Enum.map(fn {key, value} -> construct_data_object(path ++ [key], value) end)
     |> Map.new()
   end
 
-  defp compose_data_object(path, value) do
+  defp construct_data_object(path, value) do
     case value do
-      :list -> compose_list_object(path)
-      :map -> compose_map_object(path)
+      :list -> construct_list_object(path)
+      :map -> construct_map_object(path)
       value -> value
     end
   end
@@ -86,7 +86,7 @@ defmodule Pmdb.Worker do
     values = :ets.lookup(:data, path)
 
     case values do
-      [{^path, value}] -> compose_data_object(path, value)
+      [{^path, value}] -> construct_data_object(path, value)
       _ -> get_from_handler(path, path_str)
     end
   end
