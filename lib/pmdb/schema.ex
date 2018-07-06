@@ -25,5 +25,9 @@ defmodule Pmdb.Schema do
 
   @type list_delta() :: {non_neg_integer(), non_neg_integer(), [data_delta()]}
   @type data_delta() ::
-          primitive_data() | [list_delta()] | %{required(String.t()) => data_delta()}
+          nil
+          | :drop
+          | {:data, data()}
+          | {:list, [list_delta()]}
+          | {:map, %{required(String.t()) => data_delta()}}
 end
