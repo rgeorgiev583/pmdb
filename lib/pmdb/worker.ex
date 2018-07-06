@@ -106,6 +106,16 @@ defmodule Pmdb.Worker do
     internal_value
   end
 
+  defp get_list_object_last_index(path) do
+    match_spec = [{{path ++ [:"$1"], :"$2"}, [is_integer: :"$1"], [{{:"$1", :"$2"}}]}]
+    entries = :ets.select(:data, match_spec)
+
+    case entries do
+      [] -> -1
+      entries -> entries |> Enum.max_by(fn {index, _} -> index end)
+    end
+  end
+
   def get(path_str) do
     path = path_str2list(path_str)
     values = :ets.lookup(:data, path)
@@ -125,8 +135,28 @@ defmodule Pmdb.Worker do
     :ok
   end
 
+  def post(path_str, value) do
+    path = path_str2list(path_str)
+    values = :ets.match_object(:data, {path, :list})
+
+    case length(values) do
+      1 ->
+        next_index = get_list_object_last_index(path) + 1
+        deconstruct_data_object(path ++ [next_index], value)
+        :ok
+
+      _ ->
+        {:error, "the post/2 call only supports lists as the target objects"}
+    end
+  end
+
   def handle_call({:get, path_str}, _, _) do
     {:reply, get(path_str), nil}
+  end
+
+  def handle_cast({:post, path_str, value}, _) do
+    post(path_str, value)
+    {:noreply, nil}
   end
 
   def handle_cast({:put, path_str, value}, _) do
