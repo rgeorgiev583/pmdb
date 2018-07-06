@@ -12,7 +12,7 @@ defmodule Pmdb.Application do
       # {Pmdb.Worker, arg},
     ]
 
-    :ets.new(:data, [:named_table, :public])
+    :ets.new(:data, [:named_table, :public, read_concurrency: true, write_concurrency: true])
     :ets.new(:handlers, [:named_table, :public, read_concurrency: true])
     :ets.new(:updates, [:named_table, :public, write_concurrency: true])
 
