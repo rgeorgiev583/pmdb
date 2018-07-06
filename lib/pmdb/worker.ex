@@ -82,7 +82,10 @@ defmodule Pmdb.Worker do
   end
 
   defp deconstruct_list_object(path, value) do
-    value |> Enum.with_index() |> Enum.map(fn {element, index} -> deconstruct_data_object(path ++ [index], element) end)
+    value
+    |> Enum.with_index()
+    |> Enum.map(fn {element, index} -> deconstruct_data_object(path ++ [index], element) end)
+
     :list
   end
 
@@ -112,7 +115,7 @@ defmodule Pmdb.Worker do
       _ -> get_from_handler(path, path_str)
     end
   end
-  
+
   def put(path_str, value) do
     path = path_str2list(path_str)
     deconstruct_data_object(path, value)
