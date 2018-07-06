@@ -128,8 +128,7 @@ defmodule Pmdb.Worker do
 
   def put(path_str, value) do
     path = path_str2list(path_str)
-    pattern = path_list2pattern(path)
-    :ets.match_delete(:data, {pattern, :_})
+    delete(path_str)
     deconstruct_data_object(path, value)
     :ets.insert(:updates, {path})
     :ok
@@ -152,6 +151,14 @@ defmodule Pmdb.Worker do
     end
   end
 
+  def delete(path_str) do
+    path = path_str2list(path_str)
+    pattern = path_list2pattern(path)
+    :ets.match_delete(:data, {pattern, :_})
+    :ets.insert(:updates, {path})
+    :ok
+  end
+
   def handle_call({:get, path_str}, _, _) do
     {:reply, get(path_str), nil}
   end
@@ -163,6 +170,11 @@ defmodule Pmdb.Worker do
 
   def handle_cast({:put, path_str, value}, _) do
     put(path_str, value)
+    {:noreply, nil}
+  end
+
+  def handle_cast({:delete, path_str}, _) do
+    delete(path_str)
     {:noreply, nil}
   end
 end
