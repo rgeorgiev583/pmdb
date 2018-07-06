@@ -81,6 +81,28 @@ defmodule Pmdb.Worker do
     end
   end
 
+  defp deconstruct_list_object(path, value) do
+    value |> Enum.with_index() |> Enum.map(fn {element, index} -> deconstruct_data_object(path ++ [index], element) end)
+    :list
+  end
+
+  defp deconstruct_map_object(path, value) do
+    value |> Enum.map(fn {key, element} -> deconstruct_data_object(path ++ [key], element) end)
+    :map
+  end
+
+  defp deconstruct_data_object(path, value) do
+    internal_value =
+      cond do
+        is_list(value) -> deconstruct_list_object(path, value)
+        is_map(value) -> deconstruct_map_object(path, value)
+        true -> value
+      end
+
+    :ets.insert(:data, {path, internal_value})
+    internal_value
+  end
+
   def get(path_str) do
     path = path_str2list(path_str)
     values = :ets.lookup(:data, path)
@@ -90,8 +112,20 @@ defmodule Pmdb.Worker do
       _ -> get_from_handler(path, path_str)
     end
   end
+  
+  def put(path_str, value) do
+    path = path_str2list(path_str)
+    deconstruct_data_object(path, value)
+    :ets.insert(:updates, {path})
+    :ok
+  end
 
   def handle_call({:get, path_str}, _, _) do
     {:reply, get(path_str), nil}
+  end
+
+  def handle_cast({:put, path_str, value}, _) do
+    put(path_str, value)
+    {:noreply, nil}
   end
 end
