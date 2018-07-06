@@ -34,15 +34,19 @@ defmodule Pmdb.Worker do
   end
 
   defp get_from_handler(path, path_str) do
+    traverse_handlers = fn {handler_path, handler}, handler_list ->
+      handlers =
+        case path do
+          [^handler_path | _] -> [handler]
+          _ -> []
+        end
+
+      handler_list ++ handlers
+    end
+
     handler_list =
       :ets.foldl(
-        fn {handler_path, handler}, handler_list ->
-          if List.starts_with?(path, handler_path) do
-            handler_list ++ [handler]
-          else
-            handler_list
-          end
-        end,
+        traverse_handlers,
         [],
         :handlers
       )
