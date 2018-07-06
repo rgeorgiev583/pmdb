@@ -52,7 +52,7 @@ defmodule Pmdb.Worker do
       )
 
     case handler_list do
-      [handler] -> Pmdb.Handler.get(path_str)
+      [handler] -> {:ok, Pmdb.Handler.get(path_str)}
       _ -> {:error, "handler not found for the provided path"}
     end
   end
@@ -108,7 +108,7 @@ defmodule Pmdb.Worker do
     values = :ets.lookup(:data, path)
 
     case values do
-      [{^path, value}] -> construct_data_object(path, value)
+      [{^path, value}] -> {:ok, construct_data_object(path, value)}
       _ -> get_from_handler(path, path_str)
     end
   end
