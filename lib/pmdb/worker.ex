@@ -33,7 +33,7 @@ defmodule Pmdb.Worker do
     {:noreply, nil}
   end
 
-  defp get_from_handler(path) do
+  defp get_from_handler(path, path_str) do
     handler_list =
       :ets.foldl(
         fn {handler_path, handler}, handler_list ->
@@ -48,7 +48,7 @@ defmodule Pmdb.Worker do
       )
 
     case handler_list do
-      [handler] -> {:ok}
+      [handler] -> Pmdb.Handler.get(path_str)
       _ -> {:error, "handler not found for the provided path"}
     end
   end
@@ -83,7 +83,7 @@ defmodule Pmdb.Worker do
 
     case values do
       [{^path, value}] -> compose_data_object(path, value)
-      _ -> get_from_handler(path)
+      _ -> get_from_handler(path, path_str)
     end
   end
 
