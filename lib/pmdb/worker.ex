@@ -87,6 +87,7 @@ defmodule Pmdb.Worker do
     end
   end
 
-  def handle_call({:get, path_str}) do
+  def handle_call({:get, path_str}, _, _) do
+    {:reply, get(path_str), nil}
   end
 end
