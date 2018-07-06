@@ -142,7 +142,9 @@ defmodule Pmdb.Worker do
     case length(values) do
       1 ->
         next_index = get_list_object_last_index(path) + 1
-        deconstruct_data_object(path ++ [next_index], value)
+        element_path = path ++ [next_index]
+        deconstruct_data_object(element_path, value)
+        :ets.insert(:updates, {path})
         :ok
 
       _ ->
