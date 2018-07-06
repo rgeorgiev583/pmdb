@@ -118,6 +118,8 @@ defmodule Pmdb.Worker do
 
   def put(path_str, value) do
     path = path_str2list(path_str)
+    pattern = path_list2pattern(path)
+    :ets.match_delete(:data, {pattern, :_})
     deconstruct_data_object(path, value)
     :ets.insert(:updates, {path})
     :ok
