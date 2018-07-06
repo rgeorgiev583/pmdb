@@ -8,7 +8,7 @@ defmodule Pmdb.Worker do
   end
 
   def init(:ok) do
-    {:ok}
+    {:ok, nil}
   end
 
   # Server API
@@ -24,13 +24,13 @@ defmodule Pmdb.Worker do
   def handle_cast({:attach, path_str, handler}, _) do
     path = path_str2list(path_str)
     :ets.insert(:handlers, {path, handler})
-    {:noreply}
+    {:noreply, nil}
   end
 
   def handle_cast({:detach, path_str}, _) do
     path = path_str2list(path_str)
     :ets.delete(:handlers, path)
-    {:noreply}
+    {:noreply, nil}
   end
 
   defp get_from_handler(path) do
