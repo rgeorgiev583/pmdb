@@ -17,6 +17,10 @@ defmodule Pmdb.Worker do
     String.split(path_str, ".")
   end
 
+  defp path_list2str(path) do
+    Enum.join(path, ".")
+  end
+
   defp path_list2pattern(path) do
     List.foldr(path, :_, fn component, base -> [component | base] end)
   end
@@ -33,7 +37,7 @@ defmodule Pmdb.Worker do
     {:noreply, nil}
   end
 
-  defp get_from_handler(path, path_str) do
+  defp get_from_handler(path) do
     traverse_handlers = fn {handler_path, handler}, handler_list ->
       handlers =
         case path do
@@ -52,8 +56,12 @@ defmodule Pmdb.Worker do
       )
 
     case handler_list do
-      [handler] -> {:ok, Pmdb.Handler.get(path_str)}
-      _ -> {:error, "handler not found for the provided path"}
+      [handler] ->
+        path_str = path_list2str(path)
+        {:ok, Pmdb.Handler.get(path_str)}
+
+      _ ->
+        {:error, "handler not found for the provided path"}
     end
   end
 
@@ -116,26 +124,23 @@ defmodule Pmdb.Worker do
     end
   end
 
-  def get(path_str) do
-    path = path_str2list(path_str)
+  def get(path) do
     values = :ets.lookup(:data, path)
 
     case values do
       [{^path, value}] -> {:ok, construct_data_object(path, value)}
-      _ -> get_from_handler(path, path_str)
+      _ -> get_from_handler(path)
     end
   end
 
-  def put(path_str, value) do
-    path = path_str2list(path_str)
-    delete(path_str)
+  def put(path, value) do
+    delete(path)
     deconstruct_data_object(path, value)
     :ets.insert(:updates, {path})
     :ok
   end
 
-  def post(path_str, value) do
-    path = path_str2list(path_str)
+  def post(path, value) do
     values = :ets.match_object(:data, {path, :list})
 
     case length(values) do
@@ -151,8 +156,7 @@ defmodule Pmdb.Worker do
     end
   end
 
-  def delete(path_str) do
-    path = path_str2list(path_str)
+  def delete(path) do
     pattern = path_list2pattern(path)
     :ets.match_delete(:data, {pattern, :_})
     :ets.insert(:updates, {path})
@@ -160,21 +164,25 @@ defmodule Pmdb.Worker do
   end
 
   def handle_call({:get, path_str}, _, _) do
-    {:reply, get(path_str), nil}
+    path = path_str2list(path_str)
+    {:reply, get(path), nil}
   end
 
   def handle_cast({:post, path_str, value}, _) do
-    post(path_str, value)
+    path = path_str2list(path_str)
+    post(path, value)
     {:noreply, nil}
   end
 
   def handle_cast({:put, path_str, value}, _) do
-    put(path_str, value)
+    path = path_str2list(path_str)
+    put(path, value)
     {:noreply, nil}
   end
 
   def handle_cast({:delete, path_str}, _) do
-    delete(path_str)
+    path = path_str2list(path_str)
+    delete(path)
     {:noreply, nil}
   end
 end
