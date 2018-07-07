@@ -116,12 +116,7 @@ defmodule Pmdb.Worker do
 
   defp get_list_object_last_index(path) do
     match_spec = [{{path ++ [:"$1"], :"$2"}, [is_integer: :"$1"], [{{:"$1", :"$2"}}]}]
-    entries = :ets.select(:data, match_spec)
-
-    case entries do
-      [] -> -1
-      entries -> entries |> Enum.max_by(fn {index, _} -> index end)
-    end
+    :ets.select(:data, match_spec) |> Enum.max_by(fn {index, _} -> index end, fn -> -1 end)
   end
 
   def get(path) do
