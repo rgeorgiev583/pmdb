@@ -136,7 +136,6 @@ defmodule Pmdb.Worker do
   def put(path, value) do
     delete(path)
     deconstruct_data_object(path, value)
-    :ets.insert(:updates, {path})
     :ok
   end
 
@@ -163,6 +162,31 @@ defmodule Pmdb.Worker do
     :ok
   end
 
+  def patch_list(path, list_delta) do
+    case list_delta do
+      {index, element_delta} ->
+        patch(path ++ [index], element_delta)
+        {start_index, length}
+    end
+  end
+
+  def patch(path, delta) do
+    case delta do
+      nil ->
+        :ok
+
+      :drop ->
+        delete(path)
+
+      {:data, data} ->
+        put(path, data)
+
+      {:list, list_delta_list} ->
+        list_delta_list
+        |> Enum.map(fn list_delta -> patch_list(path, list_delta) end)
+    end
+  end
+
   def handle_call({:get, path_str}, _, _) do
     path = path_str2list(path_str)
     {:reply, get(path), nil}
@@ -183,6 +207,12 @@ defmodule Pmdb.Worker do
   def handle_cast({:delete, path_str}, _) do
     path = path_str2list(path_str)
     delete(path)
+    {:noreply, nil}
+  end
+
+  def handle_cast({:patch, path_str, delta}, _) do
+    path = path_str2list(path_str)
+    patch(path, delta)
     {:noreply, nil}
   end
 end
