@@ -24,8 +24,7 @@ defmodule Pmdb.Schema do
           | {:map, %{required(String.t()) => annotated_data()}}
 
   @type list_delta() ::
-          {non_neg_integer(), data_delta()}
-          | {non_neg_integer(), non_neg_integer(), [data_delta()]}
+          {:replace, non_neg_integer(), data_delta()} | {:insert, non_neg_integer(), data()}
   @type data_delta() ::
           nil
           | :drop
