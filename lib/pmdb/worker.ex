@@ -157,6 +157,47 @@ defmodule Pmdb.Worker do
     :ok
   end
 
+  defp shift_left(path_without_index, data) do
+    max_index = data |> Enum.max_by(fn {index, _} -> index end, fn -> -1 end)
+
+    data
+    |> Enum.sort_by(fn {index, _} -> index end)
+    |> Enum.map(fn {index, value} ->
+      :ets.insert(:data, {path_without_index ++ [index - 1], value})
+    end)
+
+    :ets.delete(:data, path_without_index ++ [max_index])
+  end
+
+  defp shift_right(path_without_index, data) do
+    data
+    |> Enum.sort_by(fn {index, _} -> index end, &Kernel.>=/2)
+    |> Enum.map(fn {index, value} ->
+      :ets.insert(:data, {path_without_index ++ [index + 1], value})
+    end)
+  end
+
+  defp shift_list_elements(path, shifter) do
+    index = List.last(path)
+
+    case index do
+      is_integer(index) ->
+        path_without_index = List.pop_at(path, -1)
+
+        match_spec = [
+          {{path_without_index ++ [:"$1"], :"$2"},
+           [{:andalso, {:is_integer, :"$1"}, {:>, :"$1", index}}], [{{:"$1", :"$2"}}]}
+        ]
+
+        data = :ets.select(:data, match_spec)
+        shifter.(path_without_index, data)
+        :ok
+
+      _ ->
+        {:error, "object is not a list element"}
+    end
+  end
+
   def patch_list(path, list_delta) do
     case list_delta do
       {index, element_delta} ->
@@ -202,6 +243,7 @@ defmodule Pmdb.Worker do
   def handle_cast({:delete, path_str}, _) do
     path = path_str2list(path_str)
     delete(path)
+    shift_list_elements(path, &shift_left/2)
     {:noreply, nil}
   end
 
