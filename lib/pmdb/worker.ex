@@ -200,9 +200,13 @@ defmodule Pmdb.Worker do
 
   def patch_list(path, list_delta) do
     case list_delta do
-      {index, element_delta} ->
+      {:replace, index, element_delta} ->
         patch(path ++ [index], element_delta)
-        {start_index, length}
+
+      {:insert, index, data} ->
+        element_path = path ++ [index]
+        shift_list_elements(element_path, &shift_right/2)
+        put(element_path, data)
     end
   end
 
@@ -220,6 +224,9 @@ defmodule Pmdb.Worker do
       {:list, list_delta_list} ->
         list_delta_list
         |> Enum.map(fn list_delta -> patch_list(path, list_delta) end)
+
+      {:map, delta_map} ->
+        delta_map |> Enum.map(fn {key, element_delta} -> patch(path ++ [key], element_delta) end)
     end
   end
 
