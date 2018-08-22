@@ -58,7 +58,7 @@ defmodule Pmdb.Worker do
     case handler_list do
       [handler] ->
         path_str = path_list2str(path)
-        {:ok, Pmdb.Handler.get(path_str)}
+        {:ok, Pmdb.Handler.get(handler, path_str)}
 
       _ ->
         {:error, "handler not found for the provided path"}
