@@ -238,7 +238,6 @@ defmodule Pmdb.Worker do
   def handle_cast({:post, path_str, value}, _) do
     path = path_str2list(path_str)
     post(path, value)
-    :ets.insert()
     {:noreply, nil}
   end
 
