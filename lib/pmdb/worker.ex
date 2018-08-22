@@ -25,7 +25,7 @@ defmodule Pmdb.Worker do
     end
 
     matching_handler_list =
-      :ets.foldl(
+      :mnesia.foldl(
         match_handlers,
         [],
         :handlers
@@ -47,7 +47,7 @@ defmodule Pmdb.Worker do
   defp construct_list_object(path) do
     match_spec = [{{path ++ [:"$1"], :"$2"}, [is_integer: :"$1"], [{{:"$1", :"$2"}}]}]
 
-    :ets.select(:data, match_spec)
+    :mnesia.select(:data, match_spec)
     |> Enum.sort_by(fn {index, _} -> index end)
     |> Enum.map(fn {index, value} -> construct_data_object(path ++ [index], value) end)
   end
@@ -55,7 +55,7 @@ defmodule Pmdb.Worker do
   defp construct_map_object(path) do
     match_spec = [{{path ++ [:"$1"], :"$2"}, [is_binary: :"$1"], [{{:"$1", :"$2"}}]}]
 
-    :ets.select(:data, match_spec)
+    :mnesia.select(:data, match_spec)
     |> Enum.map(fn {key, value} -> construct_data_object(path ++ [key], value) end)
     |> Map.new()
   end
@@ -89,17 +89,17 @@ defmodule Pmdb.Worker do
         true -> value
       end
 
-    :ets.insert(:data, {path, internal_value})
+    :mnesia.write({:data, path, internal_value})
     internal_value
   end
 
   defp get_list_object_last_index(path) do
     match_spec = [{{path ++ [:"$1"], :"$2"}, [is_integer: :"$1"], [{{:"$1", :"$2"}}]}]
-    :ets.select(:data, match_spec) |> Enum.max_by(fn {index, _} -> index end, fn -> -1 end)
+    :mnesia.select(:data, match_spec) |> Enum.max_by(fn {index, _} -> index end, fn -> -1 end)
   end
 
   defp get(path) do
-    values = :ets.lookup(:data, path)
+    values = :mnesia.read(:data, path)
 
     case values do
       [{^path, value}] -> {:ok, construct_data_object(path, value)}
@@ -114,7 +114,7 @@ defmodule Pmdb.Worker do
   end
 
   defp post(path, value) do
-    values = :ets.match_object(:data, {path, :list})
+    values = :mnesia.match_object({:data, path, :list})
 
     case length(values) do
       1 ->
@@ -134,17 +134,17 @@ defmodule Pmdb.Worker do
     data
     |> Enum.sort_by(fn {index, _} -> index end)
     |> Enum.map(fn {index, value} ->
-      :ets.insert(:data, {path_without_index ++ [index - 1], value})
+      :mnesia.write({:data, path_without_index ++ [index - 1], value})
     end)
 
-    :ets.delete(:data, path_without_index ++ [max_index])
+    :mnesia.delete({:data, path_without_index ++ [max_index]})
   end
 
   defp shift_right(path_without_index, data) do
     data
     |> Enum.sort_by(fn {index, _} -> index end, &Kernel.>=/2)
     |> Enum.map(fn {index, value} ->
-      :ets.insert(:data, {path_without_index ++ [index + 1], value})
+      :mnesia.write({:data, path_without_index ++ [index + 1], value})
     end)
 
     :ok
@@ -162,7 +162,7 @@ defmodule Pmdb.Worker do
            [{:andalso, {:is_integer, :"$1"}, {:>, :"$1", index}}], [{{:"$1", :"$2"}}]}
         ]
 
-        data = :ets.select(:data, match_spec)
+        data = :mnesia.select(:data, match_spec)
         shifter.(path_without_index, data)
 
       true ->
@@ -172,7 +172,10 @@ defmodule Pmdb.Worker do
 
   defp delete(path) do
     pattern = Pmdb.Path.get_pattern(path)
-    :ets.match_delete(:data, {pattern, :_})
+
+    :mnesia.match_object({:data, pattern, :_})
+    |> Enum.map(fn value -> :mnesia.delete_object(value) end)
+
     shift_list_entries(path, &shift_left/2)
   end
 
@@ -214,12 +217,12 @@ defmodule Pmdb.Worker do
     pattern = Pmdb.Path.get_pattern(path)
 
     errors =
-      :ets.match_object(:handlers, {pattern, :_})
+      :mnesia.match_object({:handlers, pattern, :_})
       |> Enum.map(fn {handler_path, handler} ->
         handler_pattern = Pmdb.Path.get_pattern(handler_path)
 
         data =
-          :ets.match_object(:data, {handler_pattern, :_})
+          :mnesia.match_object({:data, handler_pattern, :_})
           |> Enum.map(fn {path, value} ->
             relative_path = Enum.drop(path, length(handler_path))
             {relative_path, value}
@@ -243,22 +246,22 @@ defmodule Pmdb.Worker do
   end
 
   defp attach(path, handler) do
-    :ets.insert(:handlers, {path, handler})
+    :mnesia.write({:handlers, path, handler})
   end
 
   defp detach(path) do
-    :ets.delete(:handlers, path)
+    :mnesia.delete({:handlers, path})
   end
 
   defp clear(path) do
     pattern = Pmdb.Path.get_pattern(path)
 
-    :ets.match_object(:handlers, {pattern, :_})
+    :mnesia.match_object({:handlers, pattern, :_})
     |> Enum.map(fn {handler_path, _} ->
       handler_pattern = Pmdb.Path.get_pattern(handler_path)
 
-      :ets.match_object(:data, {handler_pattern, :_})
-      |> Enum.map(fn {path, _} -> :ets.delete(:data, path) end)
+      :mnesia.match_object({:data, handler_pattern, :_})
+      |> Enum.map(fn {path, _} -> :mnesia.delete({:data, path}) end)
     end)
 
     :ok
