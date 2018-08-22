@@ -12,9 +12,11 @@ defmodule Pmdb.Application do
       # {Pmdb.Worker, arg},
     ]
 
-    :ets.new(:data, [:named_table, :public, read_concurrency: true, write_concurrency: true])
-    :ets.new(:handlers, [:named_table, :public, read_concurrency: true])
-    :ets.new(:updates, [:named_table, :public, write_concurrency: true])
+    :mnesia.create_schema([node()])
+    :mnesia.start()
+    :mnesia.create_table(:data, attributes: [:path, :value])
+    :mnesia.create_table(:handlers, attributes: [:path, :handler])
+    :mnesia.create_table(:updates, attributes: [:path, :operation])
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

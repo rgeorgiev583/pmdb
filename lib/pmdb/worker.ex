@@ -27,50 +27,68 @@ defmodule Pmdb.Worker do
 
   def handle_cast({:attach, path_str, handler}, _) do
     path = path_str2list(path_str)
-    :ets.insert(:handlers, {path, handler})
+    :mnesia.transaction(fn -> :mnesia.write({:handlers, path, handler}) end)
     {:noreply, nil}
   end
 
   def handle_cast({:detach, path_str}, _) do
     path = path_str2list(path_str)
-    :ets.delete(:handlers, path)
+    :mnesia.transaction(fn -> :mnesia.delete({:handlers, path}) end)
     {:noreply, nil}
   end
 
   defp get_from_handler(path) do
-    traverse_handlers = fn {handler_path, handler}, handler_list ->
-      handlers =
-        case path do
-          [^handler_path | _] -> [handler]
-          _ -> []
+    result =
+      :mnesia.transaction(fn ->
+        traverse_handlers = fn {handler_path, handler}, handler_list ->
+          handlers =
+            case path do
+              [^handler_path | _] -> [handler]
+              _ -> []
+            end
+
+          handler_list ++ handlers
         end
 
-      handler_list ++ handlers
-    end
+        handler_list =
+          :mnesia.foldl(
+            traverse_handlers,
+            [],
+            :handlers
+          )
 
-    handler_list =
-      :ets.foldl(
-        traverse_handlers,
-        [],
-        :handlers
-      )
+        case handler_list do
+          [handler] ->
+            path_str = path_list2str(path)
+            {:ok, Pmdb.Handler.get(path_str)}
 
-    case handler_list do
-      [handler] ->
-        path_str = path_list2str(path)
-        {:ok, Pmdb.Handler.get(path_str)}
+          _ ->
+            {:error, "handler not found for the provided path"}
+        end
+      end)
 
-      _ ->
-        {:error, "handler not found for the provided path"}
+    case result do
+      {:atomic, value} -> value
+      {:aborted, error} -> {:error, error}
+      _ -> nil
     end
   end
 
   defp construct_list_object(path) do
-    match_spec = [{{path ++ [:"$1"], :"$2"}, [is_integer: :"$1"], [{{:"$1", :"$2"}}]}]
+    result =
+      :mnesia.transaction(fn ->
+        match_spec = [{{path ++ [:"$1"], :"$2"}, [is_integer: :"$1"], [{{:"$1", :"$2"}}]}]
 
-    :ets.select(:data, match_spec)
-    |> Enum.sort_by(fn {index, _} -> index end)
-    |> Enum.map(fn {index, value} -> construct_data_object(path ++ [index], value) end)
+        :mnesia.select(:data, match_spec)
+        |> Enum.sort_by(fn {index, _} -> index end)
+        |> Enum.map(fn {index, value} -> construct_data_object(path ++ [index], value) end)
+      end)
+
+    case result do
+      {:atomic, value} -> value
+      {:aborted, error} -> {:error, error}
+      _ -> nil
+    end
   end
 
   defp construct_map_object(path) do
