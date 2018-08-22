@@ -41,7 +41,7 @@ defmodule Pmdb.Worker do
     traverse_handlers = fn {handler_path, handler}, handler_list ->
       handlers =
         case path do
-          [^handler_path | _] -> [handler]
+          [^handler_path | _] -> [{path, handler}]
           _ -> []
         end
 
@@ -56,12 +56,14 @@ defmodule Pmdb.Worker do
       )
 
     case handler_list do
-      [handler] ->
-        path_str = path_list2str(path)
-        {:ok, Pmdb.Handler.get(handler, path_str)}
-
-      _ ->
+      [] ->
         {:error, "handler not found for the provided path"}
+
+      list ->
+        most_appropriate_handler_entry = Enum.max_by(list, fn {path, _} -> length(path) end)
+        {entry_path, entry_handler} = most_appropriate_handler_entry
+        entry_path_str = path_list2str(entry_path)
+        {:ok, Pmdb.Handler.get(handler, entry_path_str)}
     end
   end
 
