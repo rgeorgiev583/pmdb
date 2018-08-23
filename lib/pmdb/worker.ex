@@ -230,6 +230,30 @@ defmodule Pmdb.Worker do
     end
   end
 
+  def flush(path) do
+    pattern = path_list2pattern(path)
+
+    errors =
+      :ets.match_object(:handlers, {pattern, :_})
+      |> Enum.map(fn {path, handler} ->
+        data = :ets.match_object(:data, {path, :_})
+        delta = {:map, Map.new(data)}
+        Pmdb.Handler.patch(handler, path, delta)
+      end)
+      |> Enum.filter(fn result ->
+        case result do
+          {:error, _} -> true
+          _ -> false
+        end
+      end)
+      |> Enum.map(fn {:error, error} -> error end)
+
+    case errors do
+      [] -> :ok
+      errors -> {:error, errors |> Enum.join("\n")}
+    end
+  end
+
   def handle_call({:get, path_str}, _, _) do
     path = path_str2list(path_str)
     {:reply, get(path), nil}
@@ -262,5 +286,7 @@ defmodule Pmdb.Worker do
 
   def handle_cast({:flush, path_str}, _) do
     path = path_str2list(path_str)
+    flush(path)
+    {:noreply, nil}
   end
 end
