@@ -63,7 +63,7 @@ defmodule Pmdb.Worker do
         most_appropriate_handler_entry = Enum.max_by(list, fn {path, _} -> length(path) end)
         {entry_path, entry_handler} = most_appropriate_handler_entry
         entry_path_str = path_list2str(entry_path)
-        {:ok, Pmdb.Handler.get(handler, entry_path_str)}
+        {:ok, Pmdb.Handler.get(entry_handler, entry_path_str)}
     end
   end
 
