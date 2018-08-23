@@ -14,7 +14,6 @@ defmodule Pmdb.Application do
 
     :ets.new(:data, [:named_table, :public, read_concurrency: true, write_concurrency: true])
     :ets.new(:handlers, [:named_table, :public, read_concurrency: true])
-    :ets.new(:updates, [:named_table, :public, write_concurrency: true])
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
