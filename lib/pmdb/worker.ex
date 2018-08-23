@@ -144,7 +144,6 @@ defmodule Pmdb.Worker do
         next_index = get_list_object_last_index(path) + 1
         element_path = path ++ [next_index]
         deconstruct_data_object(element_path, value)
-        :ets.insert(:updates, {path, :post})
         :ok
 
       _ ->
@@ -155,7 +154,6 @@ defmodule Pmdb.Worker do
   def delete(path) do
     pattern = path_list2pattern(path)
     :ets.match_delete(:data, {pattern, :_})
-    :ets.insert(:updates, {path, :delete})
     :ok
   end
 
