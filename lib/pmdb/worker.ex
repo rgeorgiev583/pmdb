@@ -182,9 +182,9 @@ defmodule Pmdb.Worker do
   defp shift_list_elements(path, shifter) do
     index = List.last(path)
 
-    case index do
+    cond do
       is_integer(index) ->
-        path_without_index = List.pop_at(path, -1)
+        {_, path_without_index} = List.pop_at(path, -1)
 
         match_spec = [
           {{path_without_index ++ [:"$1"], :"$2"},
@@ -195,7 +195,7 @@ defmodule Pmdb.Worker do
         shifter.(path_without_index, data)
         :ok
 
-      _ ->
+      true ->
         {:error, "object is not a list element"}
     end
   end
