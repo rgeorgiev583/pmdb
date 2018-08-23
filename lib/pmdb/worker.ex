@@ -38,24 +38,24 @@ defmodule Pmdb.Worker do
   end
 
   defp get_from_handler(path) do
-    traverse_handlers = fn {handler_path, handler}, handler_list ->
-      handlers =
+    traverse_handlers = fn {handler_path, handler}, matching_handler_list ->
+      matching_handler =
         case path do
           [^handler_path | _] -> [{path, handler}]
           _ -> []
         end
 
-      handler_list ++ handlers
+      matching_handler_list ++ matching_handler
     end
 
-    handler_list =
+    matching_handler_list =
       :ets.foldl(
         traverse_handlers,
         [],
         :handlers
       )
 
-    case handler_list do
+    case matching_handler_list do
       [] ->
         {:error, "handler not found for the provided path"}
 
