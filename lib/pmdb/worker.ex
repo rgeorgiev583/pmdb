@@ -121,7 +121,7 @@ defmodule Pmdb.Worker do
     :ets.select(:data, match_spec) |> Enum.max_by(fn {index, _} -> index end, fn -> -1 end)
   end
 
-  def get(path) do
+  defp get(path) do
     values = :ets.lookup(:data, path)
 
     case values do
@@ -130,13 +130,13 @@ defmodule Pmdb.Worker do
     end
   end
 
-  def put(path, value) do
+  defp put(path, value) do
     delete(path)
     deconstruct_data_object(path, value)
     :ok
   end
 
-  def post(path, value) do
+  defp post(path, value) do
     values = :ets.match_object(:data, {path, :list})
 
     case length(values) do
@@ -151,7 +151,7 @@ defmodule Pmdb.Worker do
     end
   end
 
-  def delete(path) do
+  defp delete(path) do
     pattern = path_list2pattern(path)
     :ets.match_delete(:data, {pattern, :_})
     :ok
@@ -198,7 +198,7 @@ defmodule Pmdb.Worker do
     end
   end
 
-  def patch_list(path, list_delta) do
+  defp patch_list(path, list_delta) do
     case list_delta do
       {:replace, index, element_delta} ->
         patch(path ++ [index], element_delta)
@@ -210,7 +210,7 @@ defmodule Pmdb.Worker do
     end
   end
 
-  def patch(path, delta) do
+  defp patch(path, delta) do
     case delta do
       nil ->
         :ok
@@ -230,7 +230,7 @@ defmodule Pmdb.Worker do
     end
   end
 
-  def flush(path) do
+  defp flush(path) do
     pattern = path_list2pattern(path)
 
     errors =
