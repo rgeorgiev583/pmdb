@@ -13,20 +13,6 @@ defmodule Pmdb.Worker do
 
   # Server API
 
-  defp path_str2list(path_str) do
-    path_separator = Application.get_env(:pmdb, :path_separator)
-    String.split(path_str, path_separator)
-  end
-
-  defp path_list2str(path) do
-    path_separator = Application.get_env(:pmdb, :path_separator)
-    Enum.join(path, path_separator)
-  end
-
-  defp path_list2pattern(path) do
-    List.foldr(path, :_, fn (component, base) -> [component | base] end)
-  end
-
   defp get_from_handler(path) do
     traverse_handlers = fn ({handler_path, handler}, matching_handler_list) ->
       matching_handler =
@@ -52,7 +38,7 @@ defmodule Pmdb.Worker do
       list ->
         most_appropriate_handler_entry = Enum.max_by(list, fn {path, _} -> length(path) end)
         {entry_path, entry_handler} = most_appropriate_handler_entry
-        entry_path_str = path_list2str(entry_path)
+        entry_path_str = Pmdb.Path.list2str(entry_path)
         value = Pmdb.Handler.get(entry_handler, entry_path_str)
         {:ok, value}
     end
@@ -184,7 +170,7 @@ defmodule Pmdb.Worker do
   end
 
   defp delete(path) do
-    pattern = path_list2pattern(path)
+    pattern = Pmdb.Path.list2pattern(path)
     :ets.match_delete(:data, {pattern, :_})
     shift_list_elements(path, &shift_left/2)
     :ok
@@ -223,7 +209,7 @@ defmodule Pmdb.Worker do
   end
 
   defp flush(path) do
-    pattern = path_list2pattern(path)
+    pattern = Pmdb.Path.list2pattern(path)
 
     errors =
       :ets.match_object(:handlers, {pattern, :_})
@@ -255,49 +241,49 @@ defmodule Pmdb.Worker do
   end
 
   def handle_call({:get, path_str}, _, _) do
-    path = path_str2list(path_str)
+    path = Pmdb.Path.str2list(path_str)
     value = get(path)
     {:reply, value, nil}
   end
 
   def handle_cast({:post, path_str, value}, _) do
-    path = path_str2list(path_str)
+    path = Pmdb.Path.str2list(path_str)
     post(path, value)
     {:noreply, nil}
   end
 
   def handle_cast({:put, path_str, value}, _) do
-    path = path_str2list(path_str)
+    path = Pmdb.Path.str2list(path_str)
     put(path, value)
     {:noreply, nil}
   end
 
   def handle_cast({:delete, path_str}, _) do
-    path = path_str2list(path_str)
+    path = Pmdb.Path.str2list(path_str)
     delete(path)
     {:noreply, nil}
   end
 
   def handle_cast({:patch, path_str, delta}, _) do
-    path = path_str2list(path_str)
+    path = Pmdb.Path.str2list(path_str)
     patch(path, delta)
     {:noreply, nil}
   end
 
   def handle_cast({:flush, path_str}, _) do
-    path = path_str2list(path_str)
+    path = Pmdb.Path.str2list(path_str)
     flush(path)
     {:noreply, nil}
   end
 
   def handle_cast({:attach, path_str, handler}, _) do
-    path = path_str2list(path_str)
+    path = Pmdb.Path.str2list(path_str)
     attach(path, handler)
     {:noreply, nil}
   end
 
   def handle_cast({:detach, path_str}, _) do
-    path = path_str2list(path_str)
+    path = Pmdb.Path.str2list(path_str)
     detach(path)
     {:noreply, nil}
   end
