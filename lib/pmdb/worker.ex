@@ -252,10 +252,10 @@ defmodule Pmdb.Worker do
     pattern = Pmdb.Path.list2pattern(path)
 
     :ets.match_object(:handlers, {pattern, :_})
-    |> Enum.map(fn {path, _} ->
-      pattern = Pmdb.Path.list2pattern(path)
+    |> Enum.map(fn {handler_path, _} ->
+      handler_pattern = Pmdb.Path.list2pattern(handler_path)
 
-      :ets.match_object(:data, {pattern, :_})
+      :ets.match_object(:data, {handler_pattern, :_})
       |> Enum.map(fn {path, _} -> :ets.delete(:data, path) end)
     end)
 
