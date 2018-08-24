@@ -71,24 +71,30 @@ defmodule Pmdb.Worker do
   defp deconstruct_list_object(path, value) do
     value
     |> Enum.with_index()
-    |> Enum.map(fn {entry, index} -> deconstruct_data_object(path ++ [index], entry) end)
+    |> Enum.map(fn {entry, index} -> deconstruct_object(path ++ [index], entry) end)
 
     :list
   end
 
   defp deconstruct_map_object(path, value) do
-    value |> Enum.map(fn {key, entry} -> deconstruct_data_object(path ++ [key], entry) end)
+    value |> Enum.map(fn {key, entry} -> deconstruct_object(path ++ [key], entry) end)
     :map
   end
 
-  defp deconstruct_data_object(path, value) do
-    internal_value =
-      cond do
-        is_list(value) -> deconstruct_list_object(path, value)
-        is_map(value) -> deconstruct_map_object(path, value)
-        true -> value
-      end
+  defp deconstruct_data_object(path, value) when is_list(value) do
+    deconstruct_list_object(path, value)
+  end
 
+  defp deconstruct_data_object(path, value) when is_map(value) do
+    deconstruct_map_object(path, value)
+  end
+
+  defp deconstruct_data_object(_, value) do
+    value
+  end
+
+  defp deconstruct_object(path, value) do
+    internal_value = deconstruct_data_object(path, value)
     :mnesia.write({:data, path, internal_value})
     internal_value
   end
@@ -112,7 +118,7 @@ defmodule Pmdb.Worker do
 
     case result do
       :ok ->
-        deconstruct_data_object(path, value)
+        deconstruct_object(path, value)
         :ok
 
       error ->
@@ -127,7 +133,7 @@ defmodule Pmdb.Worker do
       1 ->
         next_index = get_list_object_last_index(path) + 1
         entry_path = path ++ [next_index]
-        deconstruct_data_object(entry_path, value)
+        deconstruct_object(entry_path, value)
         :ok
 
       _ ->
