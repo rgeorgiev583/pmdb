@@ -142,12 +142,6 @@ defmodule Pmdb.Worker do
     end
   end
 
-  defp delete(path) do
-    pattern = path_list2pattern(path)
-    :ets.match_delete(:data, {pattern, :_})
-    :ok
-  end
-
   defp shift_left(path_without_index, data) do
     max_index = data |> Enum.max_by(fn {index, _} -> index end, fn -> -1 end)
 
@@ -187,6 +181,13 @@ defmodule Pmdb.Worker do
       true ->
         {:error, "object is not a list element"}
     end
+  end
+
+  defp delete(path) do
+    pattern = path_list2pattern(path)
+    :ets.match_delete(:data, {pattern, :_})
+    shift_list_elements(path, &shift_left/2)
+    :ok
   end
 
   defp patch_list(path, list_delta) do
@@ -266,7 +267,6 @@ defmodule Pmdb.Worker do
   def handle_cast({:delete, path_str}, _) do
     path = path_str2list(path_str)
     delete(path)
-    shift_list_elements(path, &shift_left/2)
     {:noreply, nil}
   end
 
