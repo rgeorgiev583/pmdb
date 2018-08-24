@@ -321,14 +321,7 @@ defmodule Pmdb.Worker do
   end
 
   def handle_call({:get, path_str}, _, _) do
-    path_result = Pmdb.Path.parse(path_str)
-
-    reply =
-      case path_result do
-        {:ok, path} -> {:ok, get(path)}
-        error -> error
-      end
-
+    reply = Pmdb.Generator.Worker.parse_path_and_do(path_str, fn path -> get(path) end)
     {:reply, reply, nil}
   end
 
