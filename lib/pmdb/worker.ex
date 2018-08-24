@@ -211,7 +211,8 @@ defmodule Pmdb.Worker do
     errors =
       :ets.match_object(:handlers, {pattern, :_})
       |> Enum.map(fn {path, handler} ->
-        data = :ets.match_object(:data, {path, :_})
+        pattern = Pmdb.Path.list2pattern(path)
+        data = :ets.match_object(:data, {pattern, :_})
         delta = {:map, Map.new(data)}
         Pmdb.Handler.patch(handler, path, delta)
       end)
