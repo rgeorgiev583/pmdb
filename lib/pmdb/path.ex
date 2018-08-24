@@ -21,7 +21,7 @@ defmodule Pmdb.Path do
     |> Enum.concat()
   end
 
-  def str2list(path_str) do
+  def parse(path_str) do
     {path_separator, path_index_opening_delimiter, path_index_closing_delimiter} =
       get_path_matching_environment()
 
@@ -44,7 +44,7 @@ defmodule Pmdb.Path do
     end
   end
 
-  def list2str(path) do
+  def to_string(path) do
     {path_separator, path_index_opening_delimiter, path_index_closing_delimiter} =
       get_path_matching_environment()
 

@@ -34,7 +34,7 @@ defmodule Pmdb.Worker do
       list ->
         most_appropriate_handler_entry = Enum.max_by(list, fn {path, _} -> length(path) end)
         {entry_path, entry_handler} = most_appropriate_handler_entry
-        entry_path_str = Pmdb.Path.list2str(entry_path)
+        entry_path_str = Pmdb.Path.to_string(entry_path)
         Pmdb.Handler.get(entry_handler, entry_path_str)
     end
   end
@@ -246,7 +246,7 @@ defmodule Pmdb.Worker do
   end
 
   def handle_call({:get, path_str}, _, _) do
-    path_result = Pmdb.Path.str2list(path_str)
+    path_result = Pmdb.Path.parse(path_str)
 
     reply =
       case path_result do
