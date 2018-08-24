@@ -9,6 +9,18 @@ defmodule Pmdb.Worker do
 
   # Helper functions
 
+  defp retrieve_from_appropriate_handler([]) do
+    {:error, "handler not found for the provided path"}
+  end
+
+  defp retrieve_from_appropriate_handler(matching_handler_list) do
+    {relative_path, handler} =
+      Enum.max_by(matching_handler_list, fn {relative_path, _} -> length(relative_path) end)
+
+    relative_path_str = Pmdb.Path.to_string(relative_path)
+    Pmdb.Handler.get(handler, relative_path_str)
+  end
+
   defp get_from_handler(path) do
     match_handlers = fn {handler_path, handler}, matching_handler_list ->
       matching_handler_entry =
@@ -31,17 +43,7 @@ defmodule Pmdb.Worker do
         :handlers
       )
 
-    case matching_handler_list do
-      [] ->
-        {:error, "handler not found for the provided path"}
-
-      list ->
-        {relative_path, handler} =
-          Enum.max_by(list, fn {relative_path, _} -> length(relative_path) end)
-
-        relative_path_str = Pmdb.Path.to_string(relative_path)
-        Pmdb.Handler.get(handler, relative_path_str)
-    end
+    retrieve_from_appropriate_handler(matching_handler_list)
   end
 
   defp construct_list_object(path) do
@@ -108,41 +110,48 @@ defmodule Pmdb.Worker do
     :mnesia.select(:data, match_spec) |> Enum.max_by(fn {index, _} -> index end, fn -> -1 end)
   end
 
-  defp get(path) do
-    values = :mnesia.read(:data, path)
+  defp get(path, [{path, value}]) do
+    object = construct_data_object(path, value)
+    {:ok, object}
+  end
 
-    case values do
-      [{^path, value}] -> {:ok, construct_data_object(path, value)}
-      _ -> get_from_handler(path)
-    end
+  defp get(path, _) do
+    get_from_handler(path)
+  end
+
+  defp get(path) do
+    entries = :mnesia.read(:data, path)
+    get(path, entries)
+  end
+
+  defp put(path, value, :ok) do
+    deconstruct_object(path, value)
+    :ok
+  end
+
+  defp put(_, _, error) do
+    error
   end
 
   defp put(path, value) do
     result = delete(path)
+    put(path, value, result)
+  end
 
-    case result do
-      :ok ->
-        deconstruct_object(path, value)
-        :ok
+  defp post(path, value, 1) do
+    next_index = get_list_object_last_index(path) + 1
+    entry_path = path ++ [next_index]
+    deconstruct_object(entry_path, value)
+    :ok
+  end
 
-      error ->
-        error
-    end
+  defp post(_, _, _) do
+    {:error, "the post/2 call only supports lists as the target objects"}
   end
 
   defp post(path, value) do
     values = :mnesia.match_object({:data, path, :list})
-
-    case length(values) do
-      1 ->
-        next_index = get_list_object_last_index(path) + 1
-        entry_path = path ++ [next_index]
-        deconstruct_object(entry_path, value)
-        :ok
-
-      _ ->
-        {:error, "the post/2 call only supports lists as the target objects"}
-    end
+    post(path, value, length(values))
   end
 
   defp shift_left(path_without_index, data) do
@@ -197,23 +206,30 @@ defmodule Pmdb.Worker do
     shift_list_entries(path, &shift_left/2)
   end
 
-  defp patch_list(path, list_delta) do
-    case list_delta do
-      {:replace, index, entry_delta} ->
-        patch(path ++ [index], entry_delta)
+  defp patch_list(entry_path, data, :ok) do
+    put(entry_path, data)
+  end
 
-      {:insert, index, data} ->
-        entry_path = path ++ [index]
-        result = shift_list_entries(entry_path, &shift_right/2)
+  defp patch_list(_, _, error) do
+    error
+  end
 
-        case result do
-          :ok ->
-            put(entry_path, data)
+  defp patch_list(path, {:replace, index, entry_delta}) do
+    patch(path ++ [index], entry_delta)
+  end
 
-          error ->
-            error
-        end
-    end
+  defp patch_list(path, {:insert, index, data}) do
+    entry_path = path ++ [index]
+    result = shift_list_entries(entry_path, &shift_right/2)
+    patch_list(entry_path, data, result)
+  end
+
+  defp reduce_errors([]) do
+    :ok
+  end
+
+  defp reduce_errors(errors) do
+    {:error, errors |> Enum.join("\n")}
   end
 
   defp reduce_results(results) do
@@ -227,33 +243,31 @@ defmodule Pmdb.Worker do
       end)
       |> Enum.map(fn {:error, error} -> error end)
 
-    case errors do
-      [] -> :ok
-      errors -> {:error, errors |> Enum.join("\n")}
-    end
+    reduce_errors(errors)
   end
 
-  defp patch(path, delta) do
-    case delta do
-      nil ->
-        :ok
+  defp patch(_, nil) do
+    :ok
+  end
 
-      :drop ->
-        delete(path)
+  defp patch(path, :drop) do
+    delete(path)
+  end
 
-      {:data, data} ->
-        put(path, data)
+  defp patch(path, {:data, data}) do
+    put(path, data)
+  end
 
-      {:list, list_delta_list} ->
-        list_delta_list
-        |> Enum.map(fn list_delta -> patch_list(path, list_delta) end)
-        |> reduce_results()
+  defp patch(path, {:list, list_delta_list}) do
+    list_delta_list
+    |> Enum.map(fn list_delta -> patch_list(path, list_delta) end)
+    |> reduce_results()
+  end
 
-      {:map, delta_map} ->
-        delta_map
-        |> Enum.map(fn {key, entry_delta} -> patch(path ++ [key], entry_delta) end)
-        |> reduce_results()
-    end
+  defp patch(path, {:map, delta_map}) do
+    delta_map
+    |> Enum.map(fn {key, entry_delta} -> patch(path ++ [key], entry_delta) end)
+    |> reduce_results()
   end
 
   defp flush(path) do
