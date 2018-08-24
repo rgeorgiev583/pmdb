@@ -14,11 +14,13 @@ defmodule Pmdb.Worker do
   # Server API
 
   defp path_str2list(path_str) do
-    String.split(path_str, ".")
+    path_separator = Application.get_env(:pmdb, :path_separator)
+    String.split(path_str, path_separator)
   end
 
   defp path_list2str(path) do
-    Enum.join(path, ".")
+    path_separator = Application.get_env(:pmdb, :path_separator)
+    Enum.join(path, path_separator)
   end
 
   defp path_list2pattern(path) do
