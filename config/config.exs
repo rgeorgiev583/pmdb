@@ -21,6 +21,8 @@ use Mix.Config
 #     config :logger, level: :info
 #
 config :pmdb, path_separator: "."
+config :pmdb, path_index_opening_delimiter: "["
+config :pmdb, path_index_closing_delimiter: "]"
 
 # It is also possible to import configuration files, relative to this
 # directory. For example, you can emulate configuration per environment

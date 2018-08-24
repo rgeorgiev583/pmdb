@@ -246,9 +246,14 @@ defmodule Pmdb.Worker do
   end
 
   def handle_call({:get, path_str}, _, _) do
-    path = Pmdb.Path.str2list(path_str)
-    value = get(path)
-    reply = {:ok, value}
+    path_result = Pmdb.Path.str2list(path_str)
+
+    reply =
+      case path_result do
+        {:ok, path} -> {:ok, get(path)}
+        error -> error
+      end
+
     {:reply, reply, nil}
   end
 
