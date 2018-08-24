@@ -108,9 +108,16 @@ defmodule Pmdb.Worker do
   end
 
   defp put(path, value) do
-    delete(path)
-    deconstruct_data_object(path, value)
-    :ok
+    result = delete(path)
+
+    case result do
+      :ok ->
+        deconstruct_data_object(path, value)
+        :ok
+
+      error ->
+        error
+    end
   end
 
   defp post(path, value) do
@@ -186,8 +193,15 @@ defmodule Pmdb.Worker do
 
       {:insert, index, data} ->
         entry_path = path ++ [index]
-        shift_list_entries(entry_path, &shift_right/2)
-        put(entry_path, data)
+        result = shift_list_entries(entry_path, &shift_right/2)
+
+        case result do
+          :ok ->
+            put(entry_path, data)
+
+          error ->
+            error
+        end
     end
   end
 
