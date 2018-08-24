@@ -1,4 +1,4 @@
-defmodule Pmdb.Worker.Generator do
+defmodule Pmdb.Generator.Worker do
   defmacro generate_cast_handler_without_args(method) do
     quote do
       def handle_cast({unquote(method), path_str}, _) do

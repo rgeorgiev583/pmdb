@@ -239,7 +239,7 @@ defmodule Pmdb.Worker do
 
   # Server API
 
-  import Pmdb.Worker.Generator
+  import Pmdb.Generator.Worker
 
   def init(:ok) do
     {:ok, nil}
