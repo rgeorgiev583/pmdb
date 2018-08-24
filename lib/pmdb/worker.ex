@@ -238,6 +238,20 @@ defmodule Pmdb.Worker do
     :ets.delete(:handlers, path)
   end
 
+  defp clear(path) do
+    pattern = Pmdb.Path.list2pattern(path)
+
+    :ets.match_object(:handlers, {pattern, :_})
+    |> Enum.map(fn {path, _} ->
+      pattern = Pmdb.Path.list2pattern(path)
+
+      :ets.match_object(:data, {pattern, :_})
+      |> Enum.map(fn {path, _} -> :ets.delete(:data, path) end)
+    end)
+
+    :ok
+  end
+
   # Server API
 
   import Pmdb.Generator.Worker
@@ -265,4 +279,5 @@ defmodule Pmdb.Worker do
   generate_cast_handler_without_args(:flush)
   generate_cast_handler_with_one_arg(:attach)
   generate_cast_handler_without_args(:detach)
+  generate_cast_handler_without_args(:clear)
 end
