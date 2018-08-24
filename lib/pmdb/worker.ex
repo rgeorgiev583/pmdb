@@ -10,19 +10,19 @@ defmodule Pmdb.Worker do
   # Helper functions
 
   defp get_from_handler(path) do
-    traverse_handlers = fn {handler_path, handler}, matching_handler_list ->
-      matching_handler =
+    match_handlers = fn {handler_path, handler}, matching_handler_list ->
+      matching_handler_entry =
         case path do
           [^handler_path | _] -> [{path, handler}]
           _ -> []
         end
 
-      matching_handler_list ++ matching_handler
+      matching_handler_list ++ matching_handler_entry
     end
 
     matching_handler_list =
       :ets.foldl(
-        traverse_handlers,
+        match_handlers,
         [],
         :handlers
       )
@@ -32,10 +32,9 @@ defmodule Pmdb.Worker do
         {:error, "handler not found for the provided path"}
 
       list ->
-        most_appropriate_handler_entry = Enum.max_by(list, fn {path, _} -> length(path) end)
-        {entry_path, entry_handler} = most_appropriate_handler_entry
-        entry_path_str = Pmdb.Path.to_string(entry_path)
-        Pmdb.Handler.get(entry_handler, entry_path_str)
+        {path, handler} = Enum.max_by(list, fn {path, _} -> length(path) end)
+        path_str = Pmdb.Path.to_string(path)
+        Pmdb.Handler.get(handler, path_str)
     end
   end
 
@@ -210,11 +209,11 @@ defmodule Pmdb.Worker do
 
     errors =
       :ets.match_object(:handlers, {pattern, :_})
-      |> Enum.map(fn {path, handler} ->
-        pattern = Pmdb.Path.list2pattern(path)
-        data = :ets.match_object(:data, {pattern, :_})
+      |> Enum.map(fn {handler_path, handler} ->
+        handler_pattern = Pmdb.Path.list2pattern(handler_path)
+        data = :ets.match_object(:data, {handler_pattern, :_})
         delta = {:map, Map.new(data)}
-        Pmdb.Handler.patch(handler, path, delta)
+        Pmdb.Handler.patch(handler, "", delta)
       end)
       |> Enum.filter(fn result ->
         case result do
