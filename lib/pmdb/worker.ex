@@ -24,11 +24,11 @@ defmodule Pmdb.Worker do
   end
 
   defp path_list2pattern(path) do
-    List.foldr(path, :_, fn component, base -> [component | base] end)
+    List.foldr(path, :_, fn (component, base) -> [component | base] end)
   end
 
   defp get_from_handler(path) do
-    traverse_handlers = fn {handler_path, handler}, matching_handler_list ->
+    traverse_handlers = fn ({handler_path, handler}, matching_handler_list) ->
       matching_handler =
         case path do
           [^handler_path | _] -> [{path, handler}]
@@ -53,7 +53,8 @@ defmodule Pmdb.Worker do
         most_appropriate_handler_entry = Enum.max_by(list, fn {path, _} -> length(path) end)
         {entry_path, entry_handler} = most_appropriate_handler_entry
         entry_path_str = path_list2str(entry_path)
-        {:ok, Pmdb.Handler.get(entry_handler, entry_path_str)}
+        value = Pmdb.Handler.get(entry_handler, entry_path_str)
+        {:ok, value}
     end
   end
 
@@ -246,7 +247,8 @@ defmodule Pmdb.Worker do
 
   def handle_call({:get, path_str}, _, _) do
     path = path_str2list(path_str)
-    {:reply, get(path), nil}
+    value = get(path)
+    {:reply, value, nil}
   end
 
   def handle_cast({:post, path_str, value}, _) do
