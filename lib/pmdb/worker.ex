@@ -11,7 +11,7 @@ defmodule Pmdb.Worker do
     {:ok, nil}
   end
 
-  # Server API
+  # Helper functions
 
   defp get_from_handler(path) do
     traverse_handlers = fn ({handler_path, handler}, matching_handler_list) ->
@@ -239,6 +239,8 @@ defmodule Pmdb.Worker do
   defp detach(path) do
     :ets.delete(:handlers, path)
   end
+
+  # Server API
 
   def handle_call({:get, path_str}, _, _) do
     path = Pmdb.Path.str2list(path_str)
