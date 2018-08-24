@@ -25,18 +25,6 @@ defmodule Pmdb.Worker do
     List.foldr(path, :_, fn component, base -> [component | base] end)
   end
 
-  def handle_cast({:attach, path_str, handler}, _) do
-    path = path_str2list(path_str)
-    :ets.insert(:handlers, {path, handler})
-    {:noreply, nil}
-  end
-
-  def handle_cast({:detach, path_str}, _) do
-    path = path_str2list(path_str)
-    :ets.delete(:handlers, path)
-    {:noreply, nil}
-  end
-
   defp get_from_handler(path) do
     traverse_handlers = fn {handler_path, handler}, matching_handler_list ->
       matching_handler =
@@ -287,6 +275,18 @@ defmodule Pmdb.Worker do
   def handle_cast({:flush, path_str}, _) do
     path = path_str2list(path_str)
     flush(path)
+    {:noreply, nil}
+  end
+
+  def handle_cast({:attach, path_str, handler}, _) do
+    path = path_str2list(path_str)
+    :ets.insert(:handlers, {path, handler})
+    {:noreply, nil}
+  end
+
+  def handle_cast({:detach, path_str}, _) do
+    path = path_str2list(path_str)
+    :ets.delete(:handlers, path)
     {:noreply, nil}
   end
 end
