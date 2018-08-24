@@ -14,8 +14,8 @@ defmodule Pmdb.Worker do
       matching_handler_entry =
         case path do
           [^handler_path | _] ->
-            entry_path = Enum.drop(path, length(handler_path))
-            [{entry_path, handler}]
+            relative_path = Enum.drop(path, length(handler_path))
+            [{relative_path, handler}]
 
           _ ->
             []
@@ -36,9 +36,11 @@ defmodule Pmdb.Worker do
         {:error, "handler not found for the provided path"}
 
       list ->
-        {entry_path, handler} = Enum.max_by(list, fn {entry_path, _} -> length(entry_path) end)
-        entry_path_str = Pmdb.Path.to_string(entry_path)
-        Pmdb.Handler.get(handler, entry_path_str)
+        {relative_path, handler} =
+          Enum.max_by(list, fn {relative_path, _} -> length(relative_path) end)
+
+        relative_path_str = Pmdb.Path.to_string(relative_path)
+        Pmdb.Handler.get(handler, relative_path_str)
     end
   end
 
@@ -219,8 +221,8 @@ defmodule Pmdb.Worker do
         data =
           :ets.match_object(:data, {handler_pattern, :_})
           |> Enum.map(fn {path, value} ->
-            entry_path = Enum.drop(path, length(handler_path))
-            {entry_path, value}
+            relative_path = Enum.drop(path, length(handler_path))
+            {relative_path, value}
           end)
 
         delta = {:map, Map.new(data)}
