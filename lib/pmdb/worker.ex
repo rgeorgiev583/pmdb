@@ -246,7 +246,8 @@ defmodule Pmdb.Worker do
   def handle_call({:get, path_str}, _, _) do
     path = Pmdb.Path.str2list(path_str)
     value = get(path)
-    {:reply, value, nil}
+    reply = {:ok, value}
+    {:reply, reply, nil}
   end
 
   def handle_cast({:post, path_str, value}, _) do
