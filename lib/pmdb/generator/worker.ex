@@ -1,14 +1,23 @@
 defmodule Pmdb.Generator.Worker do
+  def parse_path_and_do({:ok, path}, action) do
+    action.(path)
+  end
+
+  def parse_path_and_do({:error, error}, _) do
+    error
+  end
+
   def parse_path_and_do(path_str, action) do
     result = Pmdb.Path.parse(path_str)
+    parse_path_and_do(result, action)
+  end
 
-    case result do
-      {:ok, path} ->
-        action.(path)
+  def handle_cast_base({:atomic, value}) do
+    value
+  end
 
-      error ->
-        error
-    end
+  def handle_cast_base({:aborted, error}) do
+    {:error, error}
   end
 
   def handle_cast_base(path_str, action) do
@@ -19,10 +28,7 @@ defmodule Pmdb.Generator.Worker do
         end)
       end)
 
-    case result do
-      {:atomic, value} -> value
-      {:aborted, error} -> {:error, error}
-    end
+    handle_cast_base(result)
 
     {:noreply, nil}
   end
