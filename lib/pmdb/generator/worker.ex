@@ -12,23 +12,12 @@ defmodule Pmdb.Generator.Worker do
     parse_path_and_do(result, action)
   end
 
-  def handle_cast_base({:atomic, value}) do
-    value
-  end
-
-  def handle_cast_base({:aborted, error}) do
-    {:error, error}
-  end
-
   def handle_cast_base(path_str, action) do
-    result =
-      parse_path_and_do(path_str, fn path ->
-        :mnesia.transaction(fn ->
-          action.(path)
-        end)
+    parse_path_and_do(path_str, fn path ->
+      :mnesia.transaction(fn ->
+        action.(path)
       end)
-
-    handle_cast_base(result)
+    end)
 
     {:noreply, nil}
   end
