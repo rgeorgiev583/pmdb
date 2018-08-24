@@ -205,6 +205,23 @@ defmodule Pmdb.Worker do
     end
   end
 
+  defp reduce_results(results) do
+    errors =
+      results
+      |> Enum.filter(fn result ->
+        case result do
+          {:error, _} -> true
+          _ -> false
+        end
+      end)
+      |> Enum.map(fn {:error, error} -> error end)
+
+    case errors do
+      [] -> :ok
+      errors -> {:error, errors |> Enum.join("\n")}
+    end
+  end
+
   defp patch(path, delta) do
     case delta do
       nil ->
@@ -219,44 +236,33 @@ defmodule Pmdb.Worker do
       {:list, list_delta_list} ->
         list_delta_list
         |> Enum.map(fn list_delta -> patch_list(path, list_delta) end)
+        |> reduce_results()
 
       {:map, delta_map} ->
-        delta_map |> Enum.map(fn {key, entry_delta} -> patch(path ++ [key], entry_delta) end)
+        delta_map
+        |> Enum.map(fn {key, entry_delta} -> patch(path ++ [key], entry_delta) end)
+        |> reduce_results()
     end
-
-    :ok
   end
 
   defp flush(path) do
     pattern = Pmdb.Path.get_pattern(path)
 
-    errors =
-      :mnesia.match_object({:handlers, pattern, :_})
-      |> Enum.map(fn {handler_path, handler} ->
-        handler_pattern = Pmdb.Path.get_pattern(handler_path)
+    :mnesia.match_object({:handlers, pattern, :_})
+    |> Enum.map(fn {handler_path, handler} ->
+      handler_pattern = Pmdb.Path.get_pattern(handler_path)
 
-        data =
-          :mnesia.match_object({:data, handler_pattern, :_})
-          |> Enum.map(fn {path, value} ->
-            relative_path = Enum.drop(path, length(handler_path))
-            {relative_path, value}
-          end)
+      data =
+        :mnesia.match_object({:data, handler_pattern, :_})
+        |> Enum.map(fn {path, value} ->
+          relative_path = Enum.drop(path, length(handler_path))
+          {relative_path, value}
+        end)
 
-        delta = {:map, Map.new(data)}
-        Pmdb.Handler.patch(handler, "", delta)
-      end)
-      |> Enum.filter(fn result ->
-        case result do
-          {:error, _} -> true
-          _ -> false
-        end
-      end)
-      |> Enum.map(fn {:error, error} -> error end)
-
-    case errors do
-      [] -> :ok
-      errors -> {:error, errors |> Enum.join("\n")}
-    end
+      delta = {:map, Map.new(data)}
+      Pmdb.Handler.patch(handler, "", delta)
+    end)
+    |> reduce_results()
   end
 
   defp attach(path, handler) do
