@@ -35,8 +35,7 @@ defmodule Pmdb.Worker do
         most_appropriate_handler_entry = Enum.max_by(list, fn {path, _} -> length(path) end)
         {entry_path, entry_handler} = most_appropriate_handler_entry
         entry_path_str = Pmdb.Path.list2str(entry_path)
-        value = Pmdb.Handler.get(entry_handler, entry_path_str)
-        {:ok, value}
+        Pmdb.Handler.get(entry_handler, entry_path_str)
     end
   end
 
@@ -142,6 +141,8 @@ defmodule Pmdb.Worker do
     |> Enum.map(fn {index, value} ->
       :ets.insert(:data, {path_without_index ++ [index + 1], value})
     end)
+
+    :ok
   end
 
   defp shift_list_elements(path, shifter) do
@@ -158,7 +159,6 @@ defmodule Pmdb.Worker do
 
         data = :ets.select(:data, match_spec)
         shifter.(path_without_index, data)
-        :ok
 
       true ->
         {:error, "object is not a list element"}
@@ -169,7 +169,6 @@ defmodule Pmdb.Worker do
     pattern = Pmdb.Path.list2pattern(path)
     :ets.match_delete(:data, {pattern, :_})
     shift_list_elements(path, &shift_left/2)
-    :ok
   end
 
   defp patch_list(path, list_delta) do
@@ -202,6 +201,8 @@ defmodule Pmdb.Worker do
       {:map, delta_map} ->
         delta_map |> Enum.map(fn {key, element_delta} -> patch(path ++ [key], element_delta) end)
     end
+
+    :ok
   end
 
   defp flush(path) do
