@@ -60,12 +60,16 @@ defmodule Pmdb.Worker do
     |> Map.new()
   end
 
-  defp construct_data_object(path, value) do
-    case value do
-      :list -> construct_list_object(path)
-      :map -> construct_map_object(path)
-      value -> value
-    end
+  defp construct_data_object(path, :list) do
+    construct_list_object(path)
+  end
+
+  defp construct_data_object(path, :map) do
+    construct_map_object(path)
+  end
+
+  defp construct_data_object(_, value) do
+    value
   end
 
   defp deconstruct_list_object(path, value) do
