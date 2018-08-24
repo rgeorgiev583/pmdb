@@ -239,6 +239,8 @@ defmodule Pmdb.Worker do
 
   # Server API
 
+  import Pmdb.Worker.Generator
+
   def init(:ok) do
     {:ok, nil}
   end
@@ -250,45 +252,11 @@ defmodule Pmdb.Worker do
     {:reply, reply, nil}
   end
 
-  def handle_cast({:post, path_str, value}, _) do
-    path = Pmdb.Path.str2list(path_str)
-    post(path, value)
-    {:noreply, nil}
-  end
-
-  def handle_cast({:put, path_str, value}, _) do
-    path = Pmdb.Path.str2list(path_str)
-    put(path, value)
-    {:noreply, nil}
-  end
-
-  def handle_cast({:delete, path_str}, _) do
-    path = Pmdb.Path.str2list(path_str)
-    delete(path)
-    {:noreply, nil}
-  end
-
-  def handle_cast({:patch, path_str, delta}, _) do
-    path = Pmdb.Path.str2list(path_str)
-    patch(path, delta)
-    {:noreply, nil}
-  end
-
-  def handle_cast({:flush, path_str}, _) do
-    path = Pmdb.Path.str2list(path_str)
-    flush(path)
-    {:noreply, nil}
-  end
-
-  def handle_cast({:attach, path_str, handler}, _) do
-    path = Pmdb.Path.str2list(path_str)
-    attach(path, handler)
-    {:noreply, nil}
-  end
-
-  def handle_cast({:detach, path_str}, _) do
-    path = Pmdb.Path.str2list(path_str)
-    detach(path)
-    {:noreply, nil}
-  end
+  generate_cast_handler_with_one_arg(:post)
+  generate_cast_handler_with_one_arg(:put)
+  generate_cast_handler_without_args(:delete)
+  generate_cast_handler_with_one_arg(:patch)
+  generate_cast_handler_without_args(:flush)
+  generate_cast_handler_with_one_arg(:attach)
+  generate_cast_handler_without_args(:detach)
 end
