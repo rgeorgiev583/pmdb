@@ -1,7 +1,7 @@
 defmodule Pmdb.Worker do
   use GenServer
 
-  ## Client API
+  # Client API
 
   def start_link(options) do
     GenServer.start_link(__MODULE__, :ok, [name: __MODULE__] ++ options)
