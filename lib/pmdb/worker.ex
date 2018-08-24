@@ -7,10 +7,6 @@ defmodule Pmdb.Worker do
     GenServer.start_link(__MODULE__, :ok, [name: __MODULE__] ++ options)
   end
 
-  def init(:ok) do
-    {:ok, nil}
-  end
-
   # Helper functions
 
   defp get_from_handler(path) do
@@ -241,6 +237,10 @@ defmodule Pmdb.Worker do
   end
 
   # Server API
+
+  def init(:ok) do
+    {:ok, nil}
+  end
 
   def handle_call({:get, path_str}, _, _) do
     path = Pmdb.Path.str2list(path_str)
