@@ -69,13 +69,13 @@ defmodule Pmdb.Worker do
   defp deconstruct_list_object(path, value) do
     value
     |> Enum.with_index()
-    |> Enum.map(fn {element, index} -> deconstruct_data_object(path ++ [index], element) end)
+    |> Enum.map(fn {entry, index} -> deconstruct_data_object(path ++ [index], entry) end)
 
     :list
   end
 
   defp deconstruct_map_object(path, value) do
-    value |> Enum.map(fn {key, element} -> deconstruct_data_object(path ++ [key], element) end)
+    value |> Enum.map(fn {key, entry} -> deconstruct_data_object(path ++ [key], entry) end)
     :map
   end
 
@@ -117,8 +117,8 @@ defmodule Pmdb.Worker do
     case length(values) do
       1 ->
         next_index = get_list_object_last_index(path) + 1
-        element_path = path ++ [next_index]
-        deconstruct_data_object(element_path, value)
+        entry_path = path ++ [next_index]
+        deconstruct_data_object(entry_path, value)
         :ok
 
       _ ->
@@ -148,7 +148,7 @@ defmodule Pmdb.Worker do
     :ok
   end
 
-  defp shift_list_elements(path, shifter) do
+  defp shift_list_entries(path, shifter) do
     index = List.last(path)
 
     cond do
@@ -164,25 +164,25 @@ defmodule Pmdb.Worker do
         shifter.(path_without_index, data)
 
       true ->
-        {:error, "object is not a list element"}
+        {:error, "object is not a list entry"}
     end
   end
 
   defp delete(path) do
     pattern = Pmdb.Path.list2pattern(path)
     :ets.match_delete(:data, {pattern, :_})
-    shift_list_elements(path, &shift_left/2)
+    shift_list_entries(path, &shift_left/2)
   end
 
   defp patch_list(path, list_delta) do
     case list_delta do
-      {:replace, index, element_delta} ->
-        patch(path ++ [index], element_delta)
+      {:replace, index, entry_delta} ->
+        patch(path ++ [index], entry_delta)
 
       {:insert, index, data} ->
-        element_path = path ++ [index]
-        shift_list_elements(element_path, &shift_right/2)
-        put(element_path, data)
+        entry_path = path ++ [index]
+        shift_list_entries(entry_path, &shift_right/2)
+        put(entry_path, data)
     end
   end
 
@@ -202,7 +202,7 @@ defmodule Pmdb.Worker do
         |> Enum.map(fn list_delta -> patch_list(path, list_delta) end)
 
       {:map, delta_map} ->
-        delta_map |> Enum.map(fn {key, element_delta} -> patch(path ++ [key], element_delta) end)
+        delta_map |> Enum.map(fn {key, entry_delta} -> patch(path ++ [key], entry_delta) end)
     end
 
     :ok
