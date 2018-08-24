@@ -246,6 +246,14 @@ defmodule Pmdb.Worker do
     end
   end
 
+  defp attach(path, handler) do
+    :ets.insert(:handlers, {path, handler})
+  end
+
+  defp detach(path) do
+    :ets.delete(:handlers, path)
+  end
+
   def handle_call({:get, path_str}, _, _) do
     path = path_str2list(path_str)
     value = get(path)
@@ -284,13 +292,13 @@ defmodule Pmdb.Worker do
 
   def handle_cast({:attach, path_str, handler}, _) do
     path = path_str2list(path_str)
-    :ets.insert(:handlers, {path, handler})
+    attach(path, handler)
     {:noreply, nil}
   end
 
   def handle_cast({:detach, path_str}, _) do
     path = path_str2list(path_str)
-    :ets.delete(:handlers, path)
+    detach(path)
     {:noreply, nil}
   end
 end
