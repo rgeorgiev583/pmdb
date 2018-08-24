@@ -167,24 +167,25 @@ defmodule Pmdb.Worker do
     :ok
   end
 
+  defp shift_list_entries(path, shifter, index) when is_integer(index) do
+    {_, path_without_index} = List.pop_at(path, -1)
+
+    match_spec = [
+      {{path_without_index ++ [:"$1"], :"$2"},
+       [{:andalso, {:is_integer, :"$1"}, {:>, :"$1", index}}], [{{:"$1", :"$2"}}]}
+    ]
+
+    data = :mnesia.select(:data, match_spec)
+    shifter.(path_without_index, data)
+  end
+
+  defp shift_list_entries(_, _, _) do
+    {:error, "object is not a list entry"}
+  end
+
   defp shift_list_entries(path, shifter) do
     index = List.last(path)
-
-    cond do
-      is_integer(index) ->
-        {_, path_without_index} = List.pop_at(path, -1)
-
-        match_spec = [
-          {{path_without_index ++ [:"$1"], :"$2"},
-           [{:andalso, {:is_integer, :"$1"}, {:>, :"$1", index}}], [{{:"$1", :"$2"}}]}
-        ]
-
-        data = :mnesia.select(:data, match_spec)
-        shifter.(path_without_index, data)
-
-      true ->
-        {:error, "object is not a list entry"}
-    end
+    shift_list_entries(path, shifter, index)
   end
 
   defp delete(path) do
