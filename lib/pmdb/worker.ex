@@ -171,7 +171,7 @@ defmodule Pmdb.Worker do
   end
 
   defp delete(path) do
-    pattern = Pmdb.Path.list2pattern(path)
+    pattern = Pmdb.Path.get_pattern(path)
     :ets.match_delete(:data, {pattern, :_})
     shift_list_entries(path, &shift_left/2)
   end
@@ -211,12 +211,12 @@ defmodule Pmdb.Worker do
   end
 
   defp flush(path) do
-    pattern = Pmdb.Path.list2pattern(path)
+    pattern = Pmdb.Path.get_pattern(path)
 
     errors =
       :ets.match_object(:handlers, {pattern, :_})
       |> Enum.map(fn {handler_path, handler} ->
-        handler_pattern = Pmdb.Path.list2pattern(handler_path)
+        handler_pattern = Pmdb.Path.get_pattern(handler_path)
 
         data =
           :ets.match_object(:data, {handler_pattern, :_})
@@ -251,11 +251,11 @@ defmodule Pmdb.Worker do
   end
 
   defp clear(path) do
-    pattern = Pmdb.Path.list2pattern(path)
+    pattern = Pmdb.Path.get_pattern(path)
 
     :ets.match_object(:handlers, {pattern, :_})
     |> Enum.map(fn {handler_path, _} ->
-      handler_pattern = Pmdb.Path.list2pattern(handler_path)
+      handler_pattern = Pmdb.Path.get_pattern(handler_path)
 
       :ets.match_object(:data, {handler_pattern, :_})
       |> Enum.map(fn {path, _} -> :ets.delete(:data, path) end)

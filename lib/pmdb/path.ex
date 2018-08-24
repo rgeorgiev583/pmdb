@@ -62,7 +62,7 @@ defmodule Pmdb.Path do
     end)
   end
 
-  def list2pattern(path) do
+  def get_pattern(path) do
     List.foldr(path, :_, fn component, base -> [component | base] end)
   end
 end
