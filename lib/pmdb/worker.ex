@@ -10,7 +10,7 @@ defmodule Pmdb.Worker do
   # Helper functions
 
   defp get_from_handler(path) do
-    traverse_handlers = fn ({handler_path, handler}, matching_handler_list) ->
+    traverse_handlers = fn {handler_path, handler}, matching_handler_list ->
       matching_handler =
         case path do
           [^handler_path | _] -> [{path, handler}]

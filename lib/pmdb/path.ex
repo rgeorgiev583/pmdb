@@ -10,6 +10,6 @@ defmodule Pmdb.Path do
   end
 
   def list2pattern(path) do
-    List.foldr(path, :_, fn (component, base) -> [component | base] end)
+    List.foldr(path, :_, fn component, base -> [component | base] end)
   end
 end
