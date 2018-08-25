@@ -321,7 +321,24 @@ defmodule Pmdb.Worker do
     {:ok, nil}
   end
 
-  generate_call_handler_with_one_arg(:get)
+  def handle_transaction_result({:atomic, value}) do
+    value
+  end
+
+  def handle_transaction_result({:aborted, error}) do
+    {:error, error}
+  end
+
+  def handle_call({:get, path_str}, _, _) do
+    result =
+      Pmdb.Generator.Worker.parse_path_and_do(path_str, fn path ->
+        :mnesia.transaction(fn -> get(path) end)
+      end)
+
+    reply = handle_transaction_result(result)
+    {:reply, reply, nil}
+  end
+
   generate_call_handler_with_one_arg(:post)
   generate_call_handler_with_one_arg(:put)
   generate_call_handler_without_args(:delete)
