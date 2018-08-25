@@ -144,20 +144,6 @@ defmodule Pmdb.Worker do
     end)
   end
 
-  defp put(path, object, :ok) do
-    deconstruct_object(path, object)
-    :ok
-  end
-
-  defp put(_, _, error) do
-    error
-  end
-
-  defp put(path, value) do
-    result = delete(path)
-    put(path, value, result)
-  end
-
   defp post(path, object, 1) do
     next_index = get_list_object_last_index(path) + 1
     entry_path = path ++ [next_index]
@@ -172,6 +158,20 @@ defmodule Pmdb.Worker do
   defp post(path, value) do
     data = :mnesia.match_object({:data, path, :list})
     post(path, value, length(data))
+  end
+
+  defp put(path, object, :ok) do
+    deconstruct_object(path, object)
+    :ok
+  end
+
+  defp put(_, _, error) do
+    error
+  end
+
+  defp put(path, value) do
+    result = delete(path)
+    put(path, value, result)
   end
 
   defp shift_left(path_without_index, data) do
@@ -316,14 +316,6 @@ defmodule Pmdb.Worker do
     {:error, "upstream caching is disabled"}
   end
 
-  defp attach(path, handler) do
-    :mnesia.write({:handlers, path, handler})
-  end
-
-  defp detach(path) do
-    :mnesia.delete({:handlers, path})
-  end
-
   defp clear(path, use_cache, _)
        when use_cache == true do
     pattern = Pmdb.Path.get_pattern(path)
@@ -341,6 +333,14 @@ defmodule Pmdb.Worker do
 
   defp clear(_, _, _) do
     {:error, "caching is disabled"}
+  end
+
+  defp attach(path, handler) do
+    :mnesia.write({:handlers, path, handler})
+  end
+
+  defp detach(path) do
+    :mnesia.delete({:handlers, path})
   end
 
   import Pmdb.Generator.Worker
@@ -393,16 +393,16 @@ defmodule Pmdb.Worker do
   generate_cache_aware_call_handler_without_args(:delete)
   generate_cache_aware_call_handler_with_one_arg(:patch)
   generate_cache_aware_call_handler_without_args(:flush)
+  generate_cache_aware_call_handler_without_args(:clear)
   generate_call_handler_with_one_arg(:attach)
   generate_call_handler_without_args(:detach)
-  generate_cache_aware_call_handler_without_args(:clear)
 
   generate_cache_aware_cast_handler_with_one_arg(:post)
   generate_cache_aware_cast_handler_with_one_arg(:put)
   generate_cache_aware_cast_handler_without_args(:delete)
   generate_cache_aware_cast_handler_with_one_arg(:patch)
   generate_cache_aware_cast_handler_without_args(:flush)
+  generate_cache_aware_cast_handler_without_args(:clear)
   generate_cast_handler_with_one_arg(:attach)
   generate_cast_handler_without_args(:detach)
-  generate_cache_aware_cast_handler_without_args(:clear)
 end
