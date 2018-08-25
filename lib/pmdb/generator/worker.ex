@@ -73,4 +73,82 @@ defmodule Pmdb.Generator.Worker do
       end
     end
   end
+
+  defmacro generate_cache_aware_cast_handler_without_args(method) do
+    quote do
+      def handle_cast({unquote(method), path_str}, _) do
+        Pmdb.Generator.Worker.handle_cast_base(path_str, fn path ->
+          use_cache = Application.get_env(:pmdb, :use_cache)
+          cache_mode = Application.get_env(:pmdb, :cache_mode)
+          unquote(method)(path, use_cache, cache_mode)
+        end)
+      end
+    end
+  end
+
+  defmacro generate_cache_aware_cast_handler_with_one_arg(method) do
+    quote do
+      def handle_cast({unquote(method), path_str, arg}, _) do
+        Pmdb.Generator.Worker.handle_cast_base(path_str, fn path ->
+          use_cache = Application.get_env(:pmdb, :use_cache)
+          cache_mode = Application.get_env(:pmdb, :cache_mode)
+          unquote(method)(path, arg, use_cache, cache_mode)
+        end)
+      end
+    end
+  end
+
+  defmacro generate_cache_aware_call_handler_without_args(method) do
+    quote do
+      def handle_call({unquote(method), path_str}, _, _) do
+        Pmdb.Generator.Worker.handle_call_base(path_str, fn path ->
+          use_cache = Application.get_env(:pmdb, :use_cache)
+          cache_mode = Application.get_env(:pmdb, :cache_mode)
+          unquote(method)(path, use_cache, cache_mode)
+        end)
+      end
+    end
+  end
+
+  defmacro generate_cache_aware_call_handler_with_one_arg(method) do
+    quote do
+      def handle_call({unquote(method), path_str, arg}, _, _) do
+        Pmdb.Generator.Worker.handle_call_base(path_str, fn path ->
+          use_cache = Application.get_env(:pmdb, :use_cache)
+          cache_mode = Application.get_env(:pmdb, :cache_mode)
+          unquote(method)(path, arg, use_cache, cache_mode)
+        end)
+      end
+    end
+  end
+
+  defmacro generate_cache_aware_handler_implementation_with_one_arg(method) do
+    quote do
+      defp unquote(method)(path, arg, use_cache, cache_mode)
+           when use_cache == true and cache_mode != :downstream do
+        unquote(method)(path, arg)
+      end
+
+      defp unquote(method)(path, arg, _, _) do
+        do_with_handler(path, fn handler, relative_path_str ->
+          Pmdb.Handler.unquote(method)(handler, relative_path_str, arg)
+        end)
+      end
+    end
+  end
+
+  defmacro generate_cache_aware_handler_implementation_without_args(method) do
+    quote do
+      defp unquote(method)(path, use_cache, cache_mode)
+           when use_cache == true and cache_mode != :downstream do
+        unquote(method)(path)
+      end
+
+      defp unquote(method)(path, _, _) do
+        do_with_handler(path, fn handler, relative_path_str ->
+          Pmdb.Handler.unquote(method)(handler, relative_path_str)
+        end)
+      end
+    end
+  end
 end

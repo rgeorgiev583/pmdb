@@ -24,6 +24,9 @@ config :pmdb, path_root: ""
 config :pmdb, path_separator: "."
 config :pmdb, path_index_opening_delimiter: "["
 config :pmdb, path_index_closing_delimiter: "]"
+config :pmdb, use_cache: true
+# cache can be bidirectional, upstream or downstream
+config :pmdb, cache_mode: :bidirectional
 
 # It is also possible to import configuration files, relative to this
 # directory. For example, you can emulate configuration per environment

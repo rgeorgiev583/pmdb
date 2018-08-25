@@ -9,19 +9,19 @@ defmodule Pmdb.Worker do
 
   # Helper functions
 
-  defp retrieve_from_appropriate_handler([]) do
+  defp do_with_appropriate_handler([], _) do
     {:error, "handler not found for the provided path"}
   end
 
-  defp retrieve_from_appropriate_handler(matching_handler_list) do
+  defp do_with_appropriate_handler(matching_handler_list, action) do
     {relative_path, handler} =
       Enum.max_by(matching_handler_list, fn {relative_path, _} -> length(relative_path) end)
 
     relative_path_str = Pmdb.Path.to_string(relative_path)
-    Pmdb.Handler.get(handler, relative_path_str)
+    action.(handler, relative_path_str)
   end
 
-  defp get_from_handler(path) do
+  defp do_with_handler(path, action) do
     match_handlers = fn {handler_path, handler}, matching_handler_list ->
       matching_handler_entry =
         case path do
@@ -43,7 +43,7 @@ defmodule Pmdb.Worker do
         :handlers
       )
 
-    retrieve_from_appropriate_handler(matching_handler_list)
+    do_with_appropriate_handler(matching_handler_list, action)
   end
 
   defp construct_list_object(path) do
@@ -110,18 +110,38 @@ defmodule Pmdb.Worker do
     :mnesia.select(:data, match_spec) |> Enum.max_by(fn {index, _} -> index end, fn -> -1 end)
   end
 
-  defp get(path, [{path, value}]) do
+  defp get(path, :handle, [{path, value}], _) do
     object = construct_data_object(path, value)
     {:ok, object}
   end
 
-  defp get(path, _) do
-    get_from_handler(path)
+  defp get(path, :handle, _, get_from_handler) do
+    do_with_handler(path, get_from_handler)
   end
 
-  defp get(path) do
+  defp get(path, cache_mode) when cache_mode != :upstream do
     data = :mnesia.read(:data, path)
-    get(path, data)
+
+    get(path, :handle, data, fn handler, relative_path_str ->
+      result = Pmdb.Handler.get(handler, relative_path_str)
+
+      case result do
+        {:ok, value} ->
+          put(path, value)
+          result
+
+        error ->
+          error
+      end
+    end)
+  end
+
+  defp get(path, _) do
+    data = :mnesia.read(:data, path)
+
+    get(path, :handle, data, fn handler, relative_path_str ->
+      Pmdb.Handler.get(handler, relative_path_str)
+    end)
   end
 
   defp put(path, object, :ok) do
@@ -270,7 +290,8 @@ defmodule Pmdb.Worker do
     |> reduce_results()
   end
 
-  defp flush(path) do
+  defp flush(path, use_cache, cache_mode)
+       when use_cache == true and cache_mode != :downstream do
     pattern = Pmdb.Path.get_pattern(path)
 
     :mnesia.match_object({:handlers, pattern, :_})
@@ -291,6 +312,10 @@ defmodule Pmdb.Worker do
     |> reduce_results()
   end
 
+  defp flush(_, _, _) do
+    {:error, "upstream caching is disabled"}
+  end
+
   defp attach(path, handler) do
     :mnesia.write({:handlers, path, handler})
   end
@@ -299,7 +324,8 @@ defmodule Pmdb.Worker do
     :mnesia.delete({:handlers, path})
   end
 
-  defp clear(path) do
+  defp clear(path, use_cache, _)
+       when use_cache == true do
     pattern = Pmdb.Path.get_pattern(path)
 
     :mnesia.match_object({:handlers, pattern, :_})
@@ -313,9 +339,28 @@ defmodule Pmdb.Worker do
     :ok
   end
 
-  # Server API
+  defp clear(_, _, _) do
+    {:error, "caching is disabled"}
+  end
 
   import Pmdb.Generator.Worker
+
+  defp get(path, use_cache, cache_mode) when use_cache == true do
+    get(path, cache_mode)
+  end
+
+  defp get(path, _, _) do
+    do_with_handler(path, fn handler, relative_path_str ->
+      Pmdb.Handler.get(handler, relative_path_str)
+    end)
+  end
+
+  generate_cache_aware_handler_implementation_with_one_arg(:post)
+  generate_cache_aware_handler_implementation_with_one_arg(:put)
+  generate_cache_aware_handler_implementation_without_args(:delete)
+  generate_cache_aware_handler_implementation_with_one_arg(:patch)
+
+  # Server API
 
   def init(:ok) do
     {:ok, nil}
@@ -332,28 +377,32 @@ defmodule Pmdb.Worker do
   def handle_call({:get, path_str}, _, _) do
     result =
       Pmdb.Generator.Worker.parse_path_and_do(path_str, fn path ->
-        :mnesia.transaction(fn -> get(path) end)
+        :mnesia.transaction(fn ->
+          use_cache = Application.get_env(:pmdb, :use_cache)
+          cache_mode = Application.get_env(:pmdb, :cache_mode)
+          get(path, use_cache, cache_mode)
+        end)
       end)
 
     reply = handle_transaction_result(result)
     {:reply, reply, nil}
   end
 
-  generate_call_handler_with_one_arg(:post)
-  generate_call_handler_with_one_arg(:put)
-  generate_call_handler_without_args(:delete)
-  generate_call_handler_with_one_arg(:patch)
-  generate_call_handler_without_args(:flush)
+  generate_cache_aware_call_handler_with_one_arg(:post)
+  generate_cache_aware_call_handler_with_one_arg(:put)
+  generate_cache_aware_call_handler_without_args(:delete)
+  generate_cache_aware_call_handler_with_one_arg(:patch)
+  generate_cache_aware_call_handler_without_args(:flush)
   generate_call_handler_with_one_arg(:attach)
   generate_call_handler_without_args(:detach)
-  generate_call_handler_without_args(:clear)
+  generate_cache_aware_call_handler_without_args(:clear)
 
-  generate_cast_handler_with_one_arg(:post)
-  generate_cast_handler_with_one_arg(:put)
-  generate_cast_handler_without_args(:delete)
-  generate_cast_handler_with_one_arg(:patch)
-  generate_cast_handler_without_args(:flush)
+  generate_cache_aware_cast_handler_with_one_arg(:post)
+  generate_cache_aware_cast_handler_with_one_arg(:put)
+  generate_cache_aware_cast_handler_without_args(:delete)
+  generate_cache_aware_cast_handler_with_one_arg(:patch)
+  generate_cache_aware_cast_handler_without_args(:flush)
   generate_cast_handler_with_one_arg(:attach)
   generate_cast_handler_without_args(:detach)
-  generate_cast_handler_without_args(:clear)
+  generate_cache_aware_cast_handler_without_args(:clear)
 end
