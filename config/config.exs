@@ -20,6 +20,7 @@ use Mix.Config
 #
 #     config :logger, level: :info
 #
+config :pmdb, path_root: ""
 config :pmdb, path_separator: "."
 config :pmdb, path_index_opening_delimiter: "["
 config :pmdb, path_index_closing_delimiter: "]"

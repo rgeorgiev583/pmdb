@@ -285,7 +285,8 @@ defmodule Pmdb.Worker do
         end)
 
       delta = {:map, data |> Map.new()}
-      Pmdb.Handler.patch(handler, "", delta)
+      root = Application.get_env(:pmdb, :path_root)
+      Pmdb.Handler.patch(handler, root, delta)
     end)
     |> reduce_results()
   end
