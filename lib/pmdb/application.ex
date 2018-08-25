@@ -9,7 +9,7 @@ defmodule Pmdb.Application do
     # List all child processes to be supervised
     children = [
       # Starts a worker by calling: Pmdb.Worker.start_link(arg)
-      # {Pmdb.Worker, arg},
+      Pmdb.Worker
     ]
 
     :mnesia.start()
