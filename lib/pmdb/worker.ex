@@ -326,6 +326,15 @@ defmodule Pmdb.Worker do
     {:reply, reply, nil}
   end
 
+  generate_call_handler_with_one_arg(:post)
+  generate_call_handler_with_one_arg(:put)
+  generate_call_handler_without_args(:delete)
+  generate_call_handler_with_one_arg(:patch)
+  generate_call_handler_without_args(:flush)
+  generate_call_handler_with_one_arg(:attach)
+  generate_call_handler_without_args(:detach)
+  generate_call_handler_without_args(:clear)
+
   generate_cast_handler_with_one_arg(:post)
   generate_cast_handler_with_one_arg(:put)
   generate_cast_handler_without_args(:delete)
