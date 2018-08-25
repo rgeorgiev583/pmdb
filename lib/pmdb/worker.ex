@@ -74,35 +74,35 @@ defmodule Pmdb.Worker do
     value
   end
 
-  defp deconstruct_list_object(path, value) do
-    value
+  defp deconstruct_list_object(path, list) do
+    list
     |> Enum.with_index()
-    |> Enum.map(fn {entry, index} -> deconstruct_object(path ++ [index], entry) end)
+    |> Enum.map(fn {value, index} -> deconstruct_object(path ++ [index], value) end)
 
     :list
   end
 
-  defp deconstruct_map_object(path, value) do
-    value |> Enum.map(fn {key, entry} -> deconstruct_object(path ++ [key], entry) end)
+  defp deconstruct_map_object(path, map) do
+    map |> Enum.map(fn {key, value} -> deconstruct_object(path ++ [key], value) end)
     :map
   end
 
-  defp deconstruct_data_object(path, value) when is_list(value) do
-    deconstruct_list_object(path, value)
+  defp deconstruct_data_object(path, object) when is_list(object) do
+    deconstruct_list_object(path, object)
   end
 
-  defp deconstruct_data_object(path, value) when is_map(value) do
-    deconstruct_map_object(path, value)
+  defp deconstruct_data_object(path, object) when is_map(object) do
+    deconstruct_map_object(path, object)
   end
 
-  defp deconstruct_data_object(_, value) do
+  defp deconstruct_data_object(_, object) do
+    object
+  end
+
+  defp deconstruct_object(path, object) do
+    value = deconstruct_data_object(path, object)
+    :mnesia.write({:data, path, value})
     value
-  end
-
-  defp deconstruct_object(path, value) do
-    internal_value = deconstruct_data_object(path, value)
-    :mnesia.write({:data, path, internal_value})
-    internal_value
   end
 
   defp get_list_object_last_index(path) do
@@ -120,12 +120,12 @@ defmodule Pmdb.Worker do
   end
 
   defp get(path) do
-    entries = :mnesia.read(:data, path)
-    get(path, entries)
+    data = :mnesia.read(:data, path)
+    get(path, data)
   end
 
-  defp put(path, value, :ok) do
-    deconstruct_object(path, value)
+  defp put(path, object, :ok) do
+    deconstruct_object(path, object)
     :ok
   end
 
@@ -138,10 +138,10 @@ defmodule Pmdb.Worker do
     put(path, value, result)
   end
 
-  defp post(path, value, 1) do
+  defp post(path, object, 1) do
     next_index = get_list_object_last_index(path) + 1
     entry_path = path ++ [next_index]
-    deconstruct_object(entry_path, value)
+    deconstruct_object(entry_path, object)
     :ok
   end
 
@@ -150,8 +150,8 @@ defmodule Pmdb.Worker do
   end
 
   defp post(path, value) do
-    values = :mnesia.match_object({:data, path, :list})
-    post(path, value, length(values))
+    data = :mnesia.match_object({:data, path, :list})
+    post(path, value, length(data))
   end
 
   defp shift_left(path_without_index, data) do
@@ -201,7 +201,7 @@ defmodule Pmdb.Worker do
     pattern = Pmdb.Path.get_pattern(path)
 
     :mnesia.match_object({:data, pattern, :_})
-    |> Enum.map(fn value -> :mnesia.delete_object(value) end)
+    |> Enum.map(fn entry -> :mnesia.delete_object(entry) end)
 
     shift_list_entries(path, &shift_left/2)
   end
