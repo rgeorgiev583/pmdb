@@ -7,16 +7,20 @@ defmodule Pmdb.Path do
     {path_separator, path_index_opening_delimiter, path_index_closing_delimiter}
   end
 
+  defp get_path_component_from_string(component_str, index_expr_regex) do
+    index_expr_match = Regex.run(index_expr_regex, component_str)
+
+    case index_expr_match do
+      [_, list_name, list_index] -> [list_name, String.to_integer(list_index)]
+      _ -> [component_str]
+    end
+  end
+
   defp get_path_list_from_string(path_str, path_separator, index_expr_regex) do
     path_str
     |> String.split(path_separator)
-    |> Enum.map(fn component ->
-      index_expr_match = Regex.run(index_expr_regex, component)
-
-      case index_expr_match do
-        [_, list_name, list_index] -> [list_name, String.to_integer(list_index)]
-        _ -> [component]
-      end
+    |> Enum.map(fn component_str ->
+      get_path_component_from_string(component_str, index_expr_regex)
     end)
     |> Enum.concat()
   end
