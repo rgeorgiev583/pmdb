@@ -16,7 +16,7 @@ defimpl Pmdb.Handler, for: Pmdb.FileHandler do
   end
 
   defp parse_path_and_do(handler, path_str, action) do
-    Pmdb.Generator.Worker.parse_path_and_do(path_str, fn path ->
+    Pmdb.Path.parse_path_and_do(path_str, fn path ->
       fs_path = path |> Enum.map(&get_component_str/1) |> Path.join()
       abs_fs_path = Path.join(handler.root_path, fs_path)
       action.(abs_fs_path)

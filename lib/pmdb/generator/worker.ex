@@ -1,19 +1,6 @@
 defmodule Pmdb.Generator.Worker do
-  def parse_path_and_do({:ok, path}, action) do
-    action.(path)
-  end
-
-  def parse_path_and_do({:error, error}, _) do
-    error
-  end
-
-  def parse_path_and_do(path_str, action) do
-    result = Pmdb.Path.parse(path_str)
-    parse_path_and_do(result, action)
-  end
-
   def handle_cast_base(path_str, action) do
-    parse_path_and_do(path_str, fn path ->
+    Pmdb.Path.parse_path_and_do(path_str, fn path ->
       :mnesia.transaction(fn ->
         action.(path)
       end)
@@ -32,7 +19,7 @@ defmodule Pmdb.Generator.Worker do
 
   def handle_call_base(path_str, action) do
     result =
-      parse_path_and_do(path_str, fn path ->
+      Pmdb.Path.parse_path_and_do(path_str, fn path ->
         :mnesia.transaction(fn ->
           action.(path)
         end)

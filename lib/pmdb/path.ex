@@ -37,6 +37,19 @@ defmodule Pmdb.Path do
     error
   end
 
+  defp parse_path_and_do(:do, {:ok, path}, action) do
+    action.(path)
+  end
+
+  defp parse_path_and_do(:do, {:error, error}, _) do
+    error
+  end
+
+  def parse_path_and_do(path_str, action) do
+    result = parse(path_str)
+    parse_path_and_do(:do, result, action)
+  end
+
   def parse(path_str) do
     {path_separator, path_index_opening_delimiter, path_index_closing_delimiter} =
       get_path_matching_environment()

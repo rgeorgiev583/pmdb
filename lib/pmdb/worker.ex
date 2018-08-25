@@ -354,7 +354,7 @@ defmodule Pmdb.Worker do
 
   def handle_call({:get, path_str}, _, _) do
     result =
-      Pmdb.Generator.Worker.parse_path_and_do(path_str, fn path ->
+      Pmdb.Path.parse_path_and_do(path_str, fn path ->
         :mnesia.transaction(fn ->
           use_cache = Application.get_env(:pmdb, :use_cache)
           cache_mode = Application.get_env(:pmdb, :cache_mode)
