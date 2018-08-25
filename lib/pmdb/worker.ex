@@ -321,8 +321,21 @@ defmodule Pmdb.Worker do
     {:ok, nil}
   end
 
+  def handle_transaction_result({:atomic, value}) do
+    value
+  end
+
+  def handle_transaction_result({:aborted, error}) do
+    {:error, error}
+  end
+
   def handle_call({:get, path_str}, _, _) do
-    reply = Pmdb.Generator.Worker.parse_path_and_do(path_str, fn path -> get(path) end)
+    result =
+      Pmdb.Generator.Worker.parse_path_and_do(path_str, fn path ->
+        :mnesia.transaction(fn -> get(path) end)
+      end)
+
+    reply = handle_transaction_result(result)
     {:reply, reply, nil}
   end
 
