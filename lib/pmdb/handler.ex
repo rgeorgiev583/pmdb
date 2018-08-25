@@ -16,12 +16,4 @@ defprotocol Pmdb.Handler do
   @spec patch(context :: any, path :: String.t(), delta :: Schema.data_delta()) ::
           :ok | {:error, String.t()}
   def patch(context, path, delta)
-
-  @spec describe(context :: any, path :: String.t()) ::
-          {:ok, Schema.data_type()} | {:error, String.t()}
-  def describe(context, path)
-
-  @spec validate(context :: any, path :: String.t(), schema :: Schema.data_type()) ::
-          :ok | {:error, String.t()}
-  def validate(context, path, schema)
 end
