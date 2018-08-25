@@ -1,4 +1,4 @@
-defmodule Pmdb.FileHandler do
+defmodule Pmdb.FileSystemHandler do
   defstruct root_path: Path.absname("")
 
   def init(path) do
