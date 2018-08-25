@@ -79,8 +79,8 @@ defmodule Pmdb.Generator.Worker do
       def handle_cast({unquote(method), path_str}, _) do
         Pmdb.Generator.Worker.handle_cast_base(path_str, fn path ->
           use_cache = Application.get_env(:pmdb, :use_cache)
-          cache_mode = Application.get_env(:pmdb, :cache_mode)
-          unquote(method)(path, use_cache, cache_mode)
+          cache_type = Application.get_env(:pmdb, :cache_type)
+          unquote(method)(path, use_cache, cache_type)
         end)
       end
     end
@@ -91,8 +91,8 @@ defmodule Pmdb.Generator.Worker do
       def handle_cast({unquote(method), path_str, arg}, _) do
         Pmdb.Generator.Worker.handle_cast_base(path_str, fn path ->
           use_cache = Application.get_env(:pmdb, :use_cache)
-          cache_mode = Application.get_env(:pmdb, :cache_mode)
-          unquote(method)(path, arg, use_cache, cache_mode)
+          cache_type = Application.get_env(:pmdb, :cache_type)
+          unquote(method)(path, arg, use_cache, cache_type)
         end)
       end
     end
@@ -103,8 +103,8 @@ defmodule Pmdb.Generator.Worker do
       def handle_call({unquote(method), path_str}, _, _) do
         Pmdb.Generator.Worker.handle_call_base(path_str, fn path ->
           use_cache = Application.get_env(:pmdb, :use_cache)
-          cache_mode = Application.get_env(:pmdb, :cache_mode)
-          unquote(method)(path, use_cache, cache_mode)
+          cache_type = Application.get_env(:pmdb, :cache_type)
+          unquote(method)(path, use_cache, cache_type)
         end)
       end
     end
@@ -115,8 +115,8 @@ defmodule Pmdb.Generator.Worker do
       def handle_call({unquote(method), path_str, arg}, _, _) do
         Pmdb.Generator.Worker.handle_call_base(path_str, fn path ->
           use_cache = Application.get_env(:pmdb, :use_cache)
-          cache_mode = Application.get_env(:pmdb, :cache_mode)
-          unquote(method)(path, arg, use_cache, cache_mode)
+          cache_type = Application.get_env(:pmdb, :cache_type)
+          unquote(method)(path, arg, use_cache, cache_type)
         end)
       end
     end
@@ -124,8 +124,8 @@ defmodule Pmdb.Generator.Worker do
 
   defmacro generate_cache_aware_handler_implementation_with_one_arg(method) do
     quote do
-      defp unquote(method)(path, arg, use_cache, cache_mode)
-           when use_cache == true and cache_mode != :downstream do
+      defp unquote(method)(path, arg, use_cache, cache_type)
+           when use_cache == true and cache_type != :downstream do
         unquote(method)(path, arg)
       end
 
@@ -139,8 +139,8 @@ defmodule Pmdb.Generator.Worker do
 
   defmacro generate_cache_aware_handler_implementation_without_args(method) do
     quote do
-      defp unquote(method)(path, use_cache, cache_mode)
-           when use_cache == true and cache_mode != :downstream do
+      defp unquote(method)(path, use_cache, cache_type)
+           when use_cache == true and cache_type != :downstream do
         unquote(method)(path)
       end
 
