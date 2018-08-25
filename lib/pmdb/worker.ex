@@ -244,28 +244,6 @@ defmodule Pmdb.Worker do
     patch_list(entry_path, data, result)
   end
 
-  defp reduce_errors([]) do
-    :ok
-  end
-
-  defp reduce_errors(errors) do
-    {:error, Enum.join(errors, "\n")}
-  end
-
-  defp reduce_results(results) do
-    errors =
-      results
-      |> Enum.filter(fn result ->
-        case result do
-          {:error, _} -> true
-          _ -> false
-        end
-      end)
-      |> Enum.map(fn {:error, error} -> error end)
-
-    reduce_errors(errors)
-  end
-
   defp patch(_, nil) do
     :ok
   end
@@ -281,13 +259,13 @@ defmodule Pmdb.Worker do
   defp patch(path, {:list, list_delta_list}) do
     list_delta_list
     |> Enum.map(fn list_delta -> patch_list(path, list_delta) end)
-    |> reduce_results()
+    |> Pmdb.Utility.reduce_results()
   end
 
   defp patch(path, {:map, delta_map}) do
     delta_map
     |> Enum.map(fn {key, entry_delta} -> patch(path ++ [key], entry_delta) end)
-    |> reduce_results()
+    |> Pmdb.Utility.reduce_results()
   end
 
   defp flush(path, use_cache, cache_mode)
@@ -309,7 +287,7 @@ defmodule Pmdb.Worker do
       root = Application.get_env(:pmdb, :path_root)
       Pmdb.Handler.patch(handler, root, delta)
     end)
-    |> reduce_results()
+    |> Pmdb.Utility.reduce_results()
   end
 
   defp flush(_, _, _) do
