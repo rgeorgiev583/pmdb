@@ -7,13 +7,17 @@ defmodule Pmdb.Path do
     {path_separator, path_index_opening_delimiter, path_index_closing_delimiter}
   end
 
+  defp get_path_component_from_regex_match(_, [_, list_name, list_index]) do
+    [list_name, String.to_integer(list_index)]
+  end
+
+  defp get_path_component_from_regex_match(component_str, _) do
+    [component_str]
+  end
+
   defp get_path_component_from_string(component_str, index_expr_regex) do
     index_expr_match = Regex.run(index_expr_regex, component_str)
-
-    case index_expr_match do
-      [_, list_name, list_index] -> [list_name, String.to_integer(list_index)]
-      _ -> [component_str]
-    end
+    get_path_component_from_regex_match(component_str, index_expr_match)
   end
 
   defp get_path_list_from_string(path_str, path_separator, index_expr_regex) do
@@ -23,6 +27,14 @@ defmodule Pmdb.Path do
       get_path_component_from_string(component_str, index_expr_regex)
     end)
     |> Enum.concat()
+  end
+
+  defp parse(path_str, path_separator, {:ok, index_expr_regex}) do
+    {:ok, get_path_list_from_string(path_str, path_separator, index_expr_regex)}
+  end
+
+  defp parse(_, _, error) do
+    error
   end
 
   def parse(path_str) do
@@ -39,31 +51,25 @@ defmodule Pmdb.Path do
           "(\\d+)" <> Regex.escape(path_index_closing_delimiter) <> "$"
       )
 
-    case index_expr_regex_result do
-      {:ok, index_expr_regex} ->
-        {:ok, get_path_list_from_string(path_str, path_separator, index_expr_regex)}
+    parse(path_str, path_separator, index_expr_regex_result)
+  end
 
-      error ->
-        error
-    end
+  def append_path_component(path_str, component) when is_integer(component) do
+    {_, path_index_opening_delimiter, path_index_closing_delimiter} =
+      get_path_matching_environment()
+
+    path_str <>
+      path_index_opening_delimiter <> Integer.to_string(component) <> path_index_closing_delimiter
+  end
+
+  def append_path_component(path_str, component) do
+    {path_separator, _, _} = get_path_matching_environment()
+    path_str <> path_separator <> component
   end
 
   def to_string(path) do
-    {path_separator, path_index_opening_delimiter, path_index_closing_delimiter} =
-      get_path_matching_environment()
-
     path
-    |> Enum.reduce(fn component, path_str ->
-      cond do
-        is_integer(component) ->
-          path_str <>
-            path_index_opening_delimiter <>
-            Integer.to_string(component) <> path_index_closing_delimiter
-
-        true ->
-          path_str <> path_separator <> component
-      end
-    end)
+    |> Enum.reduce(fn component, path_str -> append_path_component(path_str, component) end)
   end
 
   def get_pattern(path) do
