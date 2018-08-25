@@ -321,10 +321,15 @@ defmodule Pmdb.Worker do
     {:ok, nil}
   end
 
-  def handle_call({:get, path_str}, _, _) do
-    reply = Pmdb.Generator.Worker.parse_path_and_do(path_str, fn path -> get(path) end)
-    {:reply, reply, nil}
-  end
+  generate_call_handler_with_one_arg(:get)
+  generate_call_handler_with_one_arg(:post)
+  generate_call_handler_with_one_arg(:put)
+  generate_call_handler_without_args(:delete)
+  generate_call_handler_with_one_arg(:patch)
+  generate_call_handler_without_args(:flush)
+  generate_call_handler_with_one_arg(:attach)
+  generate_call_handler_without_args(:detach)
+  generate_call_handler_without_args(:clear)
 
   generate_cast_handler_with_one_arg(:post)
   generate_cast_handler_with_one_arg(:put)
