@@ -26,7 +26,7 @@ defmodule Pmdb.Worker do
       matching_handler_entry =
         case path do
           [^handler_path | _] ->
-            relative_path = Enum.drop(path, length(handler_path))
+            relative_path = path |> Enum.drop(length(handler_path))
             [{relative_path, handler}]
 
           _ ->
@@ -155,7 +155,7 @@ defmodule Pmdb.Worker do
   end
 
   defp shift_left(path_without_index, data) do
-    max_index = data |> Enum.max_by(fn {index, _} -> index end, fn -> -1 end)
+    max_index = Enum.max_by(data, fn {index, _} -> index end, fn -> -1 end)
 
     data
     |> Enum.sort_by(fn {index, _} -> index end)
@@ -177,7 +177,7 @@ defmodule Pmdb.Worker do
   end
 
   defp shift_list_entries(path, shifter, index) when is_integer(index) do
-    {_, path_without_index} = List.pop_at(path, -1)
+    {_, path_without_index} = path |> List.pop_at(-1)
 
     match_spec = [
       {{path_without_index ++ [:"$1"], :"$2"},
@@ -229,7 +229,7 @@ defmodule Pmdb.Worker do
   end
 
   defp reduce_errors(errors) do
-    {:error, errors |> Enum.join("\n")}
+    {:error, Enum.join(errors, "\n")}
   end
 
   defp reduce_results(results) do
@@ -280,11 +280,11 @@ defmodule Pmdb.Worker do
       data =
         :mnesia.match_object({:data, handler_pattern, :_})
         |> Enum.map(fn {path, value} ->
-          relative_path = Enum.drop(path, length(handler_path))
+          relative_path = path |> Enum.drop(length(handler_path))
           {relative_path, value}
         end)
 
-      delta = {:map, Map.new(data)}
+      delta = {:map, data |> Map.new()}
       Pmdb.Handler.patch(handler, "", delta)
     end)
     |> reduce_results()
