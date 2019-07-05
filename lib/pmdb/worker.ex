@@ -174,6 +174,10 @@ defmodule Pmdb.Worker do
     put(path, value, result)
   end
 
+  defp shift_left(_, []) do
+    :ok
+  end
+
   defp shift_left(path_without_index, data) do
     max_index = Enum.max_by(data, fn {index, _} -> index end, fn -> -1 end)
 
@@ -184,6 +188,10 @@ defmodule Pmdb.Worker do
     end)
 
     :mnesia.delete({:data, path_without_index ++ [max_index]})
+  end
+
+  defp shift_right(_, []) do
+    :ok
   end
 
   defp shift_right(path_without_index, data) do
