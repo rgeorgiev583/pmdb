@@ -82,10 +82,13 @@ defimpl Pmdb.Handler, for: Pmdb.FileHandler do
     |> Enum.map(fn {value, index} ->
       put_impl(Path.join(path, Integer.to_string(index)), value, :put)
     end)
+    |> Pmdb.Utility.reduce_results()
   end
 
   defp put_impl(path, map, :write) when is_map(map) do
-    map |> Enum.map(fn {key, value} -> put_impl(Path.join(path, key), value, :put) end)
+    map
+    |> Enum.map(fn {key, value} -> put_impl(Path.join(path, key), value, :put) end)
+    |> Pmdb.Utility.reduce_results()
   end
 
   defp put_impl(path, value, :write) do
