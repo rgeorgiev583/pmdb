@@ -234,7 +234,7 @@ defmodule Pmdb.Worker do
     error
   end
 
-  defp patch_list(path, {:replace, index, entry_delta}) do
+  defp patch_list(path, {:modify, index, entry_delta}) do
     patch(path ++ [index], entry_delta)
   end
 
