@@ -110,7 +110,7 @@ defmodule Pmdb.Worker do
     :mnesia.select(:data, match_spec) |> Enum.max_by(fn {index, _} -> index end, fn -> -1 end)
   end
 
-  defp get(path, :handle, [{path, value}], _) do
+  defp get(path, :handle, [{:data, path, value}], _) do
     object = construct_data_object(path, value)
     {:ok, object}
   end
