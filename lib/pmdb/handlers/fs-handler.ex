@@ -129,6 +129,82 @@ defimpl Pmdb.Handler, for: Pmdb.FileHandler do
     end)
   end
 
+  defp shift_left(_, []) do
+    :ok
+  end
+
+  defp shift_left(path_without_index, data) do
+    max_index = Enum.max_by(data, fn {index, _} -> index end, fn -> -1 end)
+
+    data
+    |> Enum.sort_by(fn {index, _} -> index end)
+    |> Enum.map(fn {index, value} ->
+      :mnesia.write({:data, path_without_index ++ [index - 1], value})
+    end)
+
+    :mnesia.delete({:data, path_without_index ++ [max_index]})
+  end
+
+  defp shift_right(_, []) do
+    :ok
+  end
+
+  defp shift_right(path_without_index, data) do
+    data
+    |> Enum.sort_by(fn {index, _} -> index end, &Kernel.>=/2)
+    |> Enum.map(fn {index, value} ->
+      :mnesia.write({:data, path_without_index ++ [index + 1], value})
+    end)
+
+    :ok
+  end
+
+  defp shift_list_entries(path, shifter, index) when is_integer(index) do
+    {_, path_without_index} = path |> List.pop_at(-1)
+
+    match_spec = [
+      {{path_without_index ++ [:"$1"], :"$2"},
+       [{:andalso, {:is_integer, :"$1"}, {:>, :"$1", index}}], [{{:"$1", :"$2"}}]}
+    ]
+
+    data = :mnesia.select(:data, match_spec)
+    shifter.(path_without_index, data)
+  end
+
+  defp shift_list_entries(path, shifter) do
+    index = length(path) - 1
+    shift_list_entries(path, shifter, index)
+  end
+
+  defp delete(path) do
+    pattern = Pmdb.Path.get_pattern(path)
+
+    :mnesia.match_object({:data, pattern, :_})
+    |> Enum.map(fn entry -> :mnesia.delete_object(entry) end)
+
+    shift_list_entries(path, &shift_left/2)
+  end
+
+  defp patch_list(entry_path, data, :ok) do
+    put_impl(entry_path, data)
+  end
+
+  defp patch_list(path, {:modify, index, entry_delta}) do
+    patch_impl(path ++ [index], entry_delta)
+  end
+
+  defp patch_list(path, {:insert, index, data}) do
+    entry_path = path ++ [index]
+    result = shift_list_entries(entry_path, &shift_right/2)
+    patch_list(entry_path, data, result)
+  end
+
+  defp patch_list(path, {:append, data}) do
+    last_index = get_list_object_last_index(path)
+    entry_path = path ++ [last_index + 1]
+    patch_list(entry_path, data, :ok)
+  end
+
   defp patch_impl(_, nil) do
     :ok
   end
@@ -141,8 +217,10 @@ defimpl Pmdb.Handler, for: Pmdb.FileHandler do
     put_impl(path, data)
   end
 
-  defp patch_impl(_, {:list, _}) do
-    {:error, "not implemented"}
+  defp patch_impl(path, {:list, list_delta_list}) do
+    list_delta_list
+    |> Enum.map(fn list_delta -> patch_list(path, list_delta) end)
+    |> Pmdb.Utility.reduce_results()
   end
 
   defp patch_impl(path, {:map, delta_map}) do
