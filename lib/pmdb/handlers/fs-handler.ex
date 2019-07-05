@@ -54,7 +54,7 @@ defimpl Pmdb.Handler, for: Pmdb.FileHandler do
   end
 
   defp get_impl(path, {:ok, info}) do
-    get_impl(path, info.type)
+    get_impl(path, {:type, info.type})
   end
 
   defp get_impl(_, error) do
