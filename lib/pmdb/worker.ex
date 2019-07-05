@@ -244,6 +244,12 @@ defmodule Pmdb.Worker do
     patch_list(entry_path, data, result)
   end
 
+  defp patch_list(path, {:append, data}) do
+    last_index = get_list_object_last_index(path)
+    entry_path = path ++ [last_index + 1]
+    patch_list(entry_path, data, :ok)
+  end
+
   defp patch(_, nil) do
     :ok
   end
