@@ -213,7 +213,7 @@ defmodule Pmdb.Worker do
   end
 
   defp shift_list_entries(path, shifter) do
-    index = List.last(path)
+    index = length(path) - 1
     shift_list_entries(path, shifter, index)
   end
 
