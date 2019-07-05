@@ -165,10 +165,6 @@ defmodule Pmdb.Worker do
     :ok
   end
 
-  defp put(_, _, error) do
-    error
-  end
-
   defp put(path, value) do
     result = delete(path)
     put(path, value, result)
@@ -216,10 +212,6 @@ defmodule Pmdb.Worker do
     shifter.(path_without_index, data)
   end
 
-  defp shift_list_entries(_, _, _) do
-    {:error, "object is not a list entry"}
-  end
-
   defp shift_list_entries(path, shifter) do
     index = length(path) - 1
     shift_list_entries(path, shifter, index)
@@ -236,10 +228,6 @@ defmodule Pmdb.Worker do
 
   defp patch_list(entry_path, data, :ok) do
     put(entry_path, data)
-  end
-
-  defp patch_list(_, _, error) do
-    error
   end
 
   defp patch_list(path, {:modify, index, entry_delta}) do
