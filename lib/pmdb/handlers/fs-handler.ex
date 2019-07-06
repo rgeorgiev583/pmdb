@@ -7,45 +7,77 @@ defmodule Pmdb.FileSystemHandler do
 end
 
 defimpl Pmdb.Handler, for: Pmdb.FileHandler do
-  defp get_component_str(component) when is_integer(component) do
-    Integer.to_string(component)
+  defp append_component(fs_path, component) when is_integer(component) do
+    list_fs_path = fs_path <> ".list"
+    index = Integer.to_string(component)
+    Path.join(list_fs_path, index)
   end
 
-  defp get_component_str(component) do
-    component
+  defp append_component(fs_path, component) do
+    map_fs_path = fs_path <> ".map"
+    Path.join(map_fs_path, component)
   end
 
   defp convert_path_to_fs_path(handler, path) do
-    fs_path = path |> Enum.map(&get_component_str/1) |> Path.join()
-    Path.join(handler.root_path, fs_path)
+    path |> Enum.reduce(handler.root_path, &append_component/2)
   end
 
-  defp get_impl(handler, path, {:type, :directory}, {:ok, entries}) do
+  defp get_path_with_extension(path, extension) do
+    basename = path |> List.last()
+    list_basename = basename <> "." <> extension
+    path |> List.replace_at(-1, list_basename)
+  end
+
+  defp get_list_path(path) do
+    get_path_with_extension(path, "list")
+  end
+
+  defp get_map_path(path) do
+    get_path_with_extension(path, "map")
+  end
+
+  defp get_impl(handler, path, {:type, :directory, :map}, {:ok, entries}) do
     entries |> Map.new(fn key -> {key, get_impl(handler, path ++ [key])} end)
   end
 
-  defp get_impl(_, _, {:type, :regular}, {:ok, value}) do
+  defp get_impl(handler, path, {:type, :directory, :list}, {:ok, entries}) do
+    entries
+    |> Map.new(fn key -> {key, get_impl(handler, path ++ [key])} end)
+    |> Enum.map(&String.to_integer/1)
+    |> Enum.sort_by(fn {index, _} -> index end)
+    |> Enum.map(fn {index, value} -> construct_data_object(path ++ [index], value) end)
+  end
+
+  defp get_impl(_, _, {:type, :regular, :primitive}, {:ok, value}) do
     :erlang.binary_to_term(value)
   end
 
-  defp get_impl(_, _, {:type, :directory}, error) do
+  defp get_impl(handler, path, {:type, :directory, :map}, {:error, :enotdir}) do
+    list_path = get_list_path(path)
+    fs_path = convert_path_to_fs_path(handler, list_path)
+    result = File.ls(fs_path)
+    get_impl(handler, path, {:type, :directory, :list}, result)
+  end
+
+  defp get_impl(_, _, {:type, :directory, _}, error) do
     error
   end
 
-  defp get_impl(_, _, {:type, :regular}, error) do
+  defp get_impl(_, _, {:type, :regular, _}, error) do
     error
   end
 
   defp get_impl(handler, path, {:type, :directory}) do
-    fs_path = convert_path_to_fs_path(handler, path)
+    map_path = get_map_path(path)
+    fs_path = convert_path_to_fs_path(handler, map_path)
     result = File.ls(fs_path)
-    get_impl(handler, path, {:type, :directory}, result)
+    get_impl(handler, path, {:type, :directory, :map}, result)
   end
 
   defp get_impl(handler, path, {:type, :regular}) do
     fs_path = convert_path_to_fs_path(handler, path)
     result = File.read(fs_path)
-    get_impl(handler, path, {:type, :regular}, result)
+    get_impl(handler, path, {:type, :regular, :primitive}, result)
   end
 
   defp get_impl(_, _, {:type, _}) do
@@ -54,10 +86,6 @@ defimpl Pmdb.Handler, for: Pmdb.FileHandler do
 
   defp get_impl(handler, path, {:ok, info}) do
     get_impl(handler, path, {:type, info.type})
-  end
-
-  defp get_impl(_, _, error) do
-    error
   end
 
   defp get_impl(handler, path) do
