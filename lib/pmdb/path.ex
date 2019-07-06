@@ -7,8 +7,8 @@ defmodule Pmdb.Path do
     {path_separator, path_index_opening_delimiter, path_index_closing_delimiter}
   end
 
-  defp get_path_component_from_regex_match(_, [_, list_name, list_index]) do
-    [list_name, String.to_integer(list_index)]
+  defp get_path_component_from_regex_match(_, [_, _, list_index]) do
+    [String.to_integer(list_index)]
   end
 
   defp get_path_component_from_regex_match(component_str, _) do
