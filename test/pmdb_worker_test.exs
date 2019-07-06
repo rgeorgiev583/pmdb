@@ -28,4 +28,11 @@ defmodule PmdbWorkerTest do
     assert GenServer.call(Pmdb.Worker, {:put, "lol", %{"a" => "b", "c" => "d"}}) == :ok
     assert GenServer.call(Pmdb.Worker, {:get, "lol.c"}) == {:ok, "d"}
   end
+
+  test "put and delete" do
+    assert GenServer.call(Pmdb.Worker, {:put, "lel.lul", -1}) == :ok
+    assert GenServer.call(Pmdb.Worker, {:get, "lel.lul"}) == {:ok, -1}
+    assert GenServer.call(Pmdb.Worker, {:delete, "lel"}) == :ok
+    assert GenServer.call(Pmdb.Worker, {:get, "lel.lul"}) != {:ok, -1}
+  end
 end
