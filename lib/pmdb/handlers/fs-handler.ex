@@ -97,7 +97,7 @@ defimpl Pmdb.Handler, for: Pmdb.FileHandler do
   end
 
   defp put_impl(path, value, :put) do
-    dir_path = Path.basename(path)
+    dir_path = Path.dirname(path)
     File.mkdir_p(dir_path)
     put_impl(path, value, :write)
   end
